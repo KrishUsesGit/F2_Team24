@@ -1,0 +1,615 @@
+{
+  "frozen_config_used": {
+    "selected_algorithm": "mad",
+    "selection_ranking": [
+      "mad",
+      "cusum",
+      "bocpd",
+      "pelt",
+      "threshold"
+    ],
+    "selection_rule": "primary=within_1_hop_accuracy (desc), tiebreak=false_attribution_rate (asc), then brier (asc)",
+    "tuning_set": [
+      "p4-tune-01-clean1",
+      "p4-tune-02-clean2",
+      "p4-tune-03-clean3",
+      "p4-tune-04-latency-hop3-severe",
+      "p4-tune-05-jitter-hop1-moderate",
+      "p4-tune-06-loss-hop2-moderate",
+      "p4-tune-07-bandwidth-hop4-moderate",
+      "p4-tune-08-jitter-hop4-severe",
+      "p4-tune-09-latency-hop1-mild-transient",
+      "p4-tune-10-loss-hop3-severe-transient",
+      "p4-tune-11-unknown-hop2",
+      "p4-tune-12-unknown-plus-impair"
+    ],
+    "tuning_set_scoreboard": {
+      "threshold": {
+        "summary": {
+          "n_trials": 12,
+          "n_positive": 8,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 0,
+            "denominator": 0,
+            "rate": null,
+            "ci95": [
+              null,
+              null
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 0,
+            "denominator": 0,
+            "rate": null,
+            "ci95": [
+              null,
+              null
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 0,
+            "denominator": 12,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.2425007574992425
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 0,
+            "denominator": 4,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.48990002040399916
+            ]
+          },
+          "detection_precision": {
+            "numerator": 0,
+            "denominator": 0,
+            "rate": null
+          },
+          "detection_recall": {
+            "numerator": 0,
+            "denominator": 8,
+            "rate": 0.0
+          },
+          "detection_latency_s": {
+            "n": 1,
+            "mean": 7.994658354,
+            "min": 7.994658354,
+            "max": 7.994658354
+          }
+        },
+        "brier": {
+          "n": 0,
+          "brier": null
+        },
+        "n_trials": 12
+      },
+      "mad": {
+        "summary": {
+          "n_trials": 12,
+          "n_positive": 8,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 4,
+            "rate": 0.5,
+            "ci95": [
+              0.15003570882017148,
+              0.8499642911798285
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 4,
+            "denominator": 4,
+            "rate": 1.0,
+            "ci95": [
+              0.5100999795960008,
+              1.0
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 2,
+            "denominator": 12,
+            "rate": 0.16666666666666666,
+            "ci95": [
+              0.04696414761482223,
+              0.44803635738467273
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 0,
+            "denominator": 4,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.48990002040399916
+            ]
+          },
+          "detection_precision": {
+            "numerator": 4,
+            "denominator": 4,
+            "rate": 1.0
+          },
+          "detection_recall": {
+            "numerator": 4,
+            "denominator": 8,
+            "rate": 0.5
+          },
+          "detection_latency_s": {
+            "n": 7,
+            "mean": -0.03359057714285714,
+            "min": -0.085656126,
+            "max": -0.005341646
+          }
+        },
+        "brier": {
+          "n": 4,
+          "brier": 0.04000000000000001
+        },
+        "n_trials": 12
+      },
+      "cusum": {
+        "summary": {
+          "n_trials": 12,
+          "n_positive": 8,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 3,
+            "denominator": 4,
+            "rate": 0.75,
+            "ci95": [
+              0.3006360524426366,
+              0.9544139373553637
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 4,
+            "denominator": 4,
+            "rate": 1.0,
+            "ci95": [
+              0.5100999795960008,
+              1.0
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 2,
+            "denominator": 12,
+            "rate": 0.16666666666666666,
+            "ci95": [
+              0.04696414761482223,
+              0.44803635738467273
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 1,
+            "denominator": 4,
+            "rate": 0.25,
+            "ci95": [
+              0.045586062644636216,
+              0.6993639475573634
+            ]
+          },
+          "detection_precision": {
+            "numerator": 4,
+            "denominator": 5,
+            "rate": 0.8
+          },
+          "detection_recall": {
+            "numerator": 4,
+            "denominator": 8,
+            "rate": 0.5
+          },
+          "detection_latency_s": {
+            "n": 8,
+            "mean": -0.78600470775,
+            "min": -6.052903622,
+            "max": -0.005341646
+          }
+        },
+        "brier": {
+          "n": 5,
+          "brier": 0.16000000000000003
+        },
+        "n_trials": 12
+      },
+      "bocpd": {
+        "summary": {
+          "n_trials": 12,
+          "n_positive": 8,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 3,
+            "denominator": 4,
+            "rate": 0.75,
+            "ci95": [
+              0.3006360524426366,
+              0.9544139373553637
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 3,
+            "denominator": 4,
+            "rate": 0.75,
+            "ci95": [
+              0.3006360524426366,
+              0.9544139373553637
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 1,
+            "denominator": 12,
+            "rate": 0.08333333333333333,
+            "ci95": [
+              0.014864709450773478,
+              0.35388592179859524
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 0,
+            "denominator": 4,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.48990002040399916
+            ]
+          },
+          "detection_precision": {
+            "numerator": 4,
+            "denominator": 4,
+            "rate": 1.0
+          },
+          "detection_recall": {
+            "numerator": 4,
+            "denominator": 8,
+            "rate": 0.5
+          },
+          "detection_latency_s": {
+            "n": 6,
+            "mean": 1.3084203476666667,
+            "min": -0.051664787,
+            "max": 7.994658354
+          }
+        },
+        "brier": {
+          "n": 4,
+          "brier": 0.25
+        },
+        "n_trials": 12
+      },
+      "pelt": {
+        "summary": {
+          "n_trials": 12,
+          "n_positive": 8,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 1,
+            "denominator": 3,
+            "rate": 0.3333333333333333,
+            "ci95": [
+              0.0614903152761605,
+              0.7923450448735121
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 3,
+            "rate": 0.6666666666666666,
+            "ci95": [
+              0.2076549551264879,
+              0.9385096847238394
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 2,
+            "denominator": 12,
+            "rate": 0.16666666666666666,
+            "ci95": [
+              0.04696414761482223,
+              0.44803635738467273
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 0,
+            "denominator": 4,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.48990002040399916
+            ]
+          },
+          "detection_precision": {
+            "numerator": 3,
+            "denominator": 3,
+            "rate": 1.0
+          },
+          "detection_recall": {
+            "numerator": 3,
+            "denominator": 8,
+            "rate": 0.375
+          },
+          "detection_latency_s": {
+            "n": 7,
+            "mean": -0.03359057714285714,
+            "min": -0.085656126,
+            "max": -0.005341646
+          }
+        },
+        "brier": {
+          "n": 3,
+          "brier": 0.3333333333333333
+        },
+        "n_trials": 12
+      }
+    },
+    "delta_align_ns": 1500000000,
+    "unknown_fraction_threshold": 0.5,
+    "onset_detector_params": {
+      "k_mad": 5.0
+    },
+    "frozen_at_mono_ns": 734430442006,
+    "frozen_at_wall_clock_utc": "2026-09-16T16:50:52Z",
+    "note": "Confidence weights/formula are UNCHANGED from Phase 3 (evidence.py's fixed, disclosed heuristic) -- not recalibrated here; see report for why."
+  },
+  "held_out_set": [
+    "p4-held-01-clean1",
+    "p4-held-02-clean2",
+    "p4-held-03-clean3",
+    "p4-held-04-latency-hop2-moderate",
+    "p4-held-05-jitter-hop3-mild",
+    "p4-held-06-loss-hop4-severe",
+    "p4-held-07-bandwidth-hop1-moderate",
+    "p4-held-08-jitter-hop2-transient",
+    "p4-held-09-bandwidth-hop3-transient",
+    "p4-held-10-loss-hop1-mild",
+    "p4-held-11-unknown-hop1",
+    "p4-held-12-unknown-plus-impair"
+  ],
+  "per_trial_detail": [
+    {
+      "trial_id": "p4-held-01-clean1",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": {
+        "min": 1,
+        "max": 5
+      },
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": true,
+      "confidence_level": "high",
+      "confidence_score": 1.0,
+      "detection_latency_s": null
+    },
+    {
+      "trial_id": "p4-held-02-clean2",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0,
+      "detection_latency_s": null
+    },
+    {
+      "trial_id": "p4-held-03-clean3",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": {
+        "min": 1,
+        "max": 5
+      },
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": true,
+      "confidence_level": "high",
+      "confidence_score": 1.0,
+      "detection_latency_s": null
+    },
+    {
+      "trial_id": "p4-held-04-latency-hop2-moderate",
+      "fault_type": "latency",
+      "expected_hop": 3,
+      "reported": {
+        "min": 3,
+        "max": 5
+      },
+      "exact_match": true,
+      "within_1_match": true,
+      "false_attribution": false,
+      "confidence_level": "high",
+      "confidence_score": 1.0,
+      "detection_latency_s": -0.038770737
+    },
+    {
+      "trial_id": "p4-held-05-jitter-hop3-mild",
+      "fault_type": "jitter",
+      "expected_hop": 4,
+      "reported": {
+        "min": 4,
+        "max": 5
+      },
+      "exact_match": true,
+      "within_1_match": true,
+      "false_attribution": false,
+      "confidence_level": "high",
+      "confidence_score": 1.0,
+      "detection_latency_s": -0.019800976
+    },
+    {
+      "trial_id": "p4-held-06-loss-hop4-severe",
+      "fault_type": "loss",
+      "expected_hop": 5,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0,
+      "detection_latency_s": -0.066976768
+    },
+    {
+      "trial_id": "p4-held-07-bandwidth-hop1-moderate",
+      "fault_type": "bandwidth",
+      "expected_hop": 2,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0,
+      "detection_latency_s": 24.477489139
+    },
+    {
+      "trial_id": "p4-held-08-jitter-hop2-transient",
+      "fault_type": "jitter",
+      "expected_hop": 3,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0,
+      "detection_latency_s": -0.057143997
+    },
+    {
+      "trial_id": "p4-held-09-bandwidth-hop3-transient",
+      "fault_type": "bandwidth",
+      "expected_hop": 4,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0,
+      "detection_latency_s": null
+    },
+    {
+      "trial_id": "p4-held-10-loss-hop1-mild",
+      "fault_type": "loss",
+      "expected_hop": 2,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0,
+      "detection_latency_s": -0.032381587
+    },
+    {
+      "trial_id": "p4-held-11-unknown-hop1",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0,
+      "detection_latency_s": null
+    },
+    {
+      "trial_id": "p4-held-12-unknown-plus-impair",
+      "fault_type": "jitter",
+      "expected_hop": 2,
+      "reported": {
+        "min": 3,
+        "max": 5
+      },
+      "exact_match": false,
+      "within_1_match": true,
+      "false_attribution": true,
+      "confidence_level": "medium",
+      "confidence_score": 0.6,
+      "detection_latency_s": -0.043456856
+    }
+  ],
+  "summary": {
+    "n_trials": 12,
+    "n_positive": 8,
+    "n_negative_clean_control": 4,
+    "exact_hop_accuracy": {
+      "numerator": 2,
+      "denominator": 3,
+      "rate": 0.6666666666666666,
+      "ci95": [
+        0.2076549551264879,
+        0.9385096847238394
+      ]
+    },
+    "within_1_hop_accuracy": {
+      "numerator": 3,
+      "denominator": 3,
+      "rate": 1.0,
+      "ci95": [
+        0.43849391955098227,
+        1.0
+      ]
+    },
+    "false_attribution_rate": {
+      "numerator": 3,
+      "denominator": 12,
+      "rate": 0.25,
+      "ci95": [
+        0.08894003962896138,
+        0.53231033912066
+      ]
+    },
+    "clean_control_false_positive_rate": {
+      "numerator": 2,
+      "denominator": 4,
+      "rate": 0.5,
+      "ci95": [
+        0.15003570882017148,
+        0.8499642911798285
+      ]
+    },
+    "detection_precision": {
+      "numerator": 3,
+      "denominator": 5,
+      "rate": 0.6
+    },
+    "detection_recall": {
+      "numerator": 3,
+      "denominator": 8,
+      "rate": 0.375
+    },
+    "detection_latency_s": {
+      "n": 7,
+      "mean": 3.459851174,
+      "min": -0.066976768,
+      "max": 24.477489139
+    }
+  },
+  "brier_score": {
+    "n": 5,
+    "brier": 0.43200000000000005
+  },
+  "calibration_by_level": [
+    {
+      "level": "insufficient",
+      "n": 2,
+      "observed_accuracy": 1.0
+    },
+    {
+      "level": "low",
+      "n": 0,
+      "observed_accuracy": null
+    },
+    {
+      "level": "medium",
+      "n": 1,
+      "observed_accuracy": 1.0
+    },
+    {
+      "level": "high",
+      "n": 4,
+      "observed_accuracy": 0.5
+    }
+  ]
+}

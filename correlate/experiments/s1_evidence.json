@@ -1,0 +1,69 @@
+{
+  "trial_id": "s1_baseline",
+  "generated_at_mono_ns": 277657737255,
+  "claims": [
+    {
+      "tag": "fact",
+      "text": "41 synchronized 500ms observation buckets covering t=251382360675..271882360675 (CLOCK_MONOTONIC ns).",
+      "data_ref": {
+        "series": "buckets",
+        "count": 41
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Hop 2 RTT onset detected at t=252382360675 (method=provisional_cusum_v1).",
+      "data_ref": {
+        "series": "hop_2",
+        "t_onset_ns": 252382360675
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Hop 3 RTT onset detected at t=252382360675 (method=provisional_cusum_v1).",
+      "data_ref": {
+        "series": "hop_3",
+        "t_onset_ns": 252382360675
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Hop 4 RTT onset detected at t=252382360675 (method=provisional_cusum_v1).",
+      "data_ref": {
+        "series": "hop_4",
+        "t_onset_ns": 252382360675
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Hop 5 RTT onset detected at t=252382360675 (method=provisional_cusum_v1).",
+      "data_ref": {
+        "series": "hop_5",
+        "t_onset_ns": 252382360675
+      }
+    },
+    {
+      "tag": "inference",
+      "hop_range": null,
+      "text": "Evidence is insufficient to infer where degradation first appears."
+    },
+    {
+      "tag": "correlation",
+      "lag_ms": null,
+      "text": "No temporal correlation established between application and path signals."
+    },
+    {
+      "tag": "confidence",
+      "level": "insufficient",
+      "score": 0.0,
+      "factors": {
+        "reason": "no persistent, corroborated hop-level onset found"
+      }
+    },
+    {
+      "tag": "unknown",
+      "hops": [],
+      "text": "No hops were UNKNOWN for this trial."
+    }
+  ]
+}

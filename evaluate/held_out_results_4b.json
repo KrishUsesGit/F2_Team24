@@ -1,0 +1,544 @@
+{
+  "validation_type": "secondary -- original held-out set, frozen Phase 4b config",
+  "frozen_config": {
+    "phase": "4b",
+    "selected_algorithm": "mad_sustained",
+    "selection_note": "mad_absfloor and mad_sustained scored IDENTICALLY on every metric on this tuning set (within_1=1.0, false_attribution=0.0, clean_control_fp=0.0, brier=0.0) -- a genuine tie, not a computed win. The automated rank_key() sort picked mad_absfloor only due to Python dict/sort insertion-order tie-breaking, which is not a principled reason. Manually broke the tie in favor of mad_sustained: requiring temporal persistence (>=3 consecutive buckets above threshold) encodes 'sustained degradation' directly, matching what a real fault actually looks like, versus mad_absfloor's fixed millisecond constant, which is a reasoned-but-somewhat-arbitrary magic number. Both are disclosed here as equally supported by the tuning data; mad_absfloor remains a documented, equally-valid alternative.",
+    "selection_ranking_as_computed_before_manual_tiebreak": [
+      "mad_absfloor",
+      "mad_sustained",
+      "mad_largest_run",
+      "mad_v1_frozen"
+    ],
+    "selection_rule": "primary=within_1_hop_accuracy (desc), then false_attribution_rate (asc), then clean_control_false_positive_rate (asc), then brier (asc)",
+    "tuning_set": [
+      "p4b-tune-01-clean1",
+      "p4b-tune-02-clean2",
+      "p4b-tune-03-clean3",
+      "p4b-tune-04-clean4",
+      "p4b-tune-05-loss-hop1-moderate",
+      "p4b-tune-06-loss-hop3-mild",
+      "p4b-tune-07-bandwidth-hop2-severe",
+      "p4b-tune-08-bandwidth-hop4-mild",
+      "p4b-tune-09-jitter-hop1-moderate",
+      "p4b-tune-10-latency-hop3-moderate"
+    ],
+    "tuning_set_scoreboard": {
+      "mad_v1_frozen": {
+        "summary": {
+          "n_trials": 10,
+          "n_positive": 6,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 1,
+            "denominator": 2,
+            "rate": 0.5,
+            "ci95": [
+              0.09452865480086614,
+              0.9054713451991339
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0,
+            "ci95": [
+              0.34237195288961925,
+              1.0
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 2,
+            "denominator": 10,
+            "rate": 0.2,
+            "ci95": [
+              0.056680947980693314,
+              0.5098431532792765
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 1,
+            "denominator": 4,
+            "rate": 0.25,
+            "ci95": [
+              0.045586062644636216,
+              0.6993639475573634
+            ]
+          },
+          "detection_precision": {
+            "numerator": 2,
+            "denominator": 3,
+            "rate": 0.6666666666666666
+          },
+          "detection_recall": {
+            "numerator": 2,
+            "denominator": 6,
+            "rate": 0.3333333333333333
+          },
+          "detection_latency_s": {
+            "n": 5,
+            "mean": 0.7640928726,
+            "min": -0.056926408,
+            "max": 3.979662047
+          }
+        },
+        "brier": {
+          "n": 3,
+          "brier": 0.3333333333333333
+        }
+      },
+      "mad_absfloor": {
+        "summary": {
+          "n_trials": 10,
+          "n_positive": 6,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0,
+            "ci95": [
+              0.34237195288961925,
+              1.0
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0,
+            "ci95": [
+              0.34237195288961925,
+              1.0
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 0,
+            "denominator": 10,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.2775401687666166
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 0,
+            "denominator": 4,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.48990002040399916
+            ]
+          },
+          "detection_precision": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0
+          },
+          "detection_recall": {
+            "numerator": 2,
+            "denominator": 6,
+            "rate": 0.3333333333333333
+          },
+          "detection_latency_s": {
+            "n": 5,
+            "mean": 0.7640928726,
+            "min": -0.056926408,
+            "max": 3.979662047
+          }
+        },
+        "brier": {
+          "n": 2,
+          "brier": 0.0
+        }
+      },
+      "mad_sustained": {
+        "summary": {
+          "n_trials": 10,
+          "n_positive": 6,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0,
+            "ci95": [
+              0.34237195288961925,
+              1.0
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0,
+            "ci95": [
+              0.34237195288961925,
+              1.0
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 0,
+            "denominator": 10,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.2775401687666166
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 0,
+            "denominator": 4,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.48990002040399916
+            ]
+          },
+          "detection_precision": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0
+          },
+          "detection_recall": {
+            "numerator": 2,
+            "denominator": 6,
+            "rate": 0.3333333333333333
+          },
+          "detection_latency_s": {
+            "n": 4,
+            "mean": 0.585200579,
+            "min": -0.056926408,
+            "max": 2.454521032
+          }
+        },
+        "brier": {
+          "n": 2,
+          "brier": 0.0
+        }
+      },
+      "mad_largest_run": {
+        "summary": {
+          "n_trials": 10,
+          "n_positive": 6,
+          "n_negative_clean_control": 4,
+          "exact_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0,
+            "ci95": [
+              0.34237195288961925,
+              1.0
+            ]
+          },
+          "within_1_hop_accuracy": {
+            "numerator": 2,
+            "denominator": 2,
+            "rate": 1.0,
+            "ci95": [
+              0.34237195288961925,
+              1.0
+            ]
+          },
+          "false_attribution_rate": {
+            "numerator": 1,
+            "denominator": 10,
+            "rate": 0.1,
+            "ci95": [
+              0.01787574951572113,
+              0.4041563854975721
+            ]
+          },
+          "clean_control_false_positive_rate": {
+            "numerator": 1,
+            "denominator": 4,
+            "rate": 0.25,
+            "ci95": [
+              0.045586062644636216,
+              0.6993639475573634
+            ]
+          },
+          "detection_precision": {
+            "numerator": 2,
+            "denominator": 3,
+            "rate": 0.6666666666666666
+          },
+          "detection_recall": {
+            "numerator": 2,
+            "denominator": 6,
+            "rate": 0.3333333333333333
+          },
+          "detection_latency_s": {
+            "n": 5,
+            "mean": 1.9640928726000002,
+            "min": -0.056926408,
+            "max": 3.979662047
+          }
+        },
+        "brier": {
+          "n": 3,
+          "brier": 0.3333333333333333
+        }
+      }
+    },
+    "onset_detector_params": {
+      "k_mad": 5.0,
+      "min_run": 3
+    },
+    "delta_align_ns": 1500000000,
+    "unknown_fraction_threshold": 0.5,
+    "known_unresolved_limitation": "loss and bandwidth fault types were NOT detected by ANY of the four candidates (mad_v1_frozen, mad_absfloor, mad_sustained, mad_largest_run) on this tuning set (0/2 each, all four candidates) -- the diagnostic hypothesis (early-noise-vs-real-later-signal) that motivated mad_largest_run did not hold on this data; elevated values under loss/bandwidth appear scattered rather than forming one dominant contiguous run. This is reported as an OPEN, UNRESOLVED problem, not fixed by Phase 4b -- see report for discussion of RTT-based onset detection possibly being the wrong observable feature for these two fault types.",
+    "frozen_at_mono_ns": 566294246287,
+    "frozen_at_wall_clock_utc": "2026-09-16T20:10:34Z",
+    "git_commit": "74c2395",
+    "environment": {
+      "os": "WSL2 Ubuntu 24.04.5 LTS",
+      "kernel": "6.18.33.2-microsoft-standard-WSL2",
+      "python": "3.12.3"
+    }
+  },
+  "held_out_set": [
+    "p4-held-01-clean1",
+    "p4-held-02-clean2",
+    "p4-held-03-clean3",
+    "p4-held-04-latency-hop2-moderate",
+    "p4-held-05-jitter-hop3-mild",
+    "p4-held-06-loss-hop4-severe",
+    "p4-held-07-bandwidth-hop1-moderate",
+    "p4-held-08-jitter-hop2-transient",
+    "p4-held-09-bandwidth-hop3-transient",
+    "p4-held-10-loss-hop1-mild",
+    "p4-held-11-unknown-hop1",
+    "p4-held-12-unknown-plus-impair"
+  ],
+  "per_trial_detail": [
+    {
+      "trial_id": "p4-held-01-clean1",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-02-clean2",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-03-clean3",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-04-latency-hop2-moderate",
+      "fault_type": "latency",
+      "expected_hop": 3,
+      "reported": {
+        "min": 3,
+        "max": 5
+      },
+      "exact_match": true,
+      "within_1_match": true,
+      "false_attribution": false,
+      "confidence_level": "high",
+      "confidence_score": 1.0
+    },
+    {
+      "trial_id": "p4-held-05-jitter-hop3-mild",
+      "fault_type": "jitter",
+      "expected_hop": 4,
+      "reported": {
+        "min": 4,
+        "max": 5
+      },
+      "exact_match": true,
+      "within_1_match": true,
+      "false_attribution": false,
+      "confidence_level": "high",
+      "confidence_score": 1.0
+    },
+    {
+      "trial_id": "p4-held-06-loss-hop4-severe",
+      "fault_type": "loss",
+      "expected_hop": 5,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-07-bandwidth-hop1-moderate",
+      "fault_type": "bandwidth",
+      "expected_hop": 2,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-08-jitter-hop2-transient",
+      "fault_type": "jitter",
+      "expected_hop": 3,
+      "reported": {
+        "min": 3,
+        "max": 5
+      },
+      "exact_match": true,
+      "within_1_match": true,
+      "false_attribution": false,
+      "confidence_level": "high",
+      "confidence_score": 1.0
+    },
+    {
+      "trial_id": "p4-held-09-bandwidth-hop3-transient",
+      "fault_type": "bandwidth",
+      "expected_hop": 4,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-10-loss-hop1-mild",
+      "fault_type": "loss",
+      "expected_hop": 2,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-11-unknown-hop1",
+      "fault_type": "clean_control",
+      "expected_hop": null,
+      "reported": null,
+      "exact_match": null,
+      "within_1_match": null,
+      "false_attribution": false,
+      "confidence_level": "insufficient",
+      "confidence_score": 0.0
+    },
+    {
+      "trial_id": "p4-held-12-unknown-plus-impair",
+      "fault_type": "jitter",
+      "expected_hop": 2,
+      "reported": {
+        "min": 3,
+        "max": 5
+      },
+      "exact_match": false,
+      "within_1_match": true,
+      "false_attribution": true,
+      "confidence_level": "medium",
+      "confidence_score": 0.6
+    }
+  ],
+  "summary": {
+    "n_trials": 12,
+    "n_positive": 8,
+    "n_negative_clean_control": 4,
+    "exact_hop_accuracy": {
+      "numerator": 3,
+      "denominator": 4,
+      "rate": 0.75,
+      "ci95": [
+        0.3006360524426366,
+        0.9544139373553637
+      ]
+    },
+    "within_1_hop_accuracy": {
+      "numerator": 4,
+      "denominator": 4,
+      "rate": 1.0,
+      "ci95": [
+        0.5100999795960008,
+        1.0
+      ]
+    },
+    "false_attribution_rate": {
+      "numerator": 1,
+      "denominator": 12,
+      "rate": 0.08333333333333333,
+      "ci95": [
+        0.014864709450773478,
+        0.35388592179859524
+      ]
+    },
+    "clean_control_false_positive_rate": {
+      "numerator": 0,
+      "denominator": 4,
+      "rate": 0.0,
+      "ci95": [
+        0.0,
+        0.48990002040399916
+      ]
+    },
+    "detection_precision": {
+      "numerator": 4,
+      "denominator": 4,
+      "rate": 1.0
+    },
+    "detection_recall": {
+      "numerator": 4,
+      "denominator": 8,
+      "rate": 0.5
+    },
+    "detection_latency_s": {
+      "n": 5,
+      "mean": -0.045229866800000004,
+      "min": -0.066976768,
+      "max": -0.019800976
+    }
+  },
+  "brier_score": {
+    "n": 4,
+    "brier": 0.04000000000000001
+  },
+  "calibration_by_level": [
+    {
+      "level": "insufficient",
+      "n": 4,
+      "observed_accuracy": 1.0
+    },
+    {
+      "level": "low",
+      "n": 0,
+      "observed_accuracy": null
+    },
+    {
+      "level": "medium",
+      "n": 1,
+      "observed_accuracy": 1.0
+    },
+    {
+      "level": "high",
+      "n": 3,
+      "observed_accuracy": 1.0
+    }
+  ],
+  "gate_check": {
+    "within_1_hop_accuracy_pass": true,
+    "false_attribution_rate_pass": true,
+    "overall_pass": true
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "trial_id": "p3-jitter-hop1-v2",
+  "transport": "tcp_syn",
+  "duration_s": 35,
+  "prober_rounds": 70,
+  "note": "corrected timing: baseline 0-10s, impaired 10-25s, recovery 25-35s"
+}

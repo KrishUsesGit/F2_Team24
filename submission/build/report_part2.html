@@ -1,0 +1,187 @@
+<!-- ======================= 5 ARCHITECTURE ======================= -->
+<h1 id="s5">5. System Architecture</h1>
+<p>HOPTRACE has two halves that are kept apart on purpose. The <b>observation and analysis path</b> measures, detects, aligns and presents. The <b>experiment control and evaluation</b> half injects faults, records what was injected, and scores results afterwards. Information flows from the second half to the first <i>only</i> through the physical network (the impairment itself), never as labels.</p>
+<figure>{{ARCH_SVG}}<figcaption><b>Figure 1.</b> HOPTRACE architecture. Solid arrows are data flow; coral dashed arrows are fault injection. The dashed horizontal line is the isolation boundary: nothing above it can read ground truth.</figcaption></figure>
+
+<h2 id="s5a">5.1 Network testbed</h2>
+<p>Six Linux network namespaces form a linear path: <code>ns-client</code>, <code>ns-r1</code>…<code>ns-r4</code>, <code>ns-server</code>, joined by five veth pairs on five <code>/30</code> subnets (<code>10.10.N.0/30</code>). IP forwarding is enabled only in the four router namespaces; static routes are explicit per subnet. The probe path therefore has exactly five measurable hops: four routers and the server as Hop 5. Details are in Section 8.</p>
+
+<h2 id="s5b">5.2 Network path probing</h2>
+<p><code>prober/prober.py</code> runs inside <code>ns-client</code> as root (raw sockets). In each <i>round</i> it sends two probes per TTL for TTL 1…5, sequentially (one outstanding probe at a time, one fixed 5-tuple per round), with a 0.3 s timeout; rounds start every 0.5 s. Two transports share one interface:</p>
+<ul>
+<li><b>TCP-SYN</b> (default in the demo and trials): a hand-built IP+TCP header with <code>IP_HDRINCL</code>, destination port 80; a router answers with ICMP Time-Exceeded, the server with a TCP reply.</li>
+<li><b>UDP</b>: destination port <code>33434 + round_id</code>; routers answer with ICMP Time-Exceeded, the server with ICMP Destination-Unreachable.</li>
+</ul>
+<p>Every probe becomes one <code>HopSample</code> row. A probe with no answer is recorded as <code>responded: false</code> with null IP and RTT; it is never interpolated.</p>
+
+<h2 id="s5c">5.3 Application telemetry</h2>
+<p><code>app/client.py</code> opens one persistent WebSocket/TCP connection (the protocol is hand-implemented in <code>app/ws_protocol.py</code> following RFC 6455) from <code>ns-client</code> to <code>app/server.py</code> in <code>ns-server</code>. It sends a <b>20 Hz ping stream</b> and a Poisson-arrival <b>interaction stream</b> (mean 2 events/s, 150 ms budget). The server only echoes sequence numbers; RTT is computed entirely client-side from the same <code>CLOCK_MONOTONIC</code> calls the prober uses. Three states are kept distinct: <i>within budget</i>, <i>late</i> (measured RTT above 150 ms, interactions only) and <i>missing</i> (no reply within 2 s; RTT stays null and is never recorded as a large number). Only the ping stream feeds the detector.</p>
+
+<h2 id="s5d">5.4 Correlation engine</h2>
+<p><code>correlate/</code> turns the two raw files into a typed result in four small modules (Figure 2): <code>synchronize.py</code> (common 500 ms timeline), <code>onset_candidates_v2.py</code> (the frozen <code>mad_sustained</code> detector), <code>align.py</code> (cross-series alignment and downstream persistence) and <code>evidence.py</code> (typed claims). <code>pipeline.py</code> orchestrates them. The engine reads only the two files it is given; there is no code path that could read what was injected.</p>
+<figure>{{PIPELINE_SVG}}<figcaption><b>Figure 2.</b> The analysis data flow, from raw measurements to the stored bundle that the dashboard displays.</figcaption></figure>
+
+<h2 id="s5e">5.5 Evidence and interpretation layer</h2>
+<p>The correlation engine's output is an <code>EvidenceRecord</code>: a list of claims, each carrying exactly one of five tags. <code>present/interpret.py</code> maps the record to one of four locked result sentences, <code>present/technical_view.py</code> exposes the underlying numbers, and <code>present/path_bundle.py</code> assembles the UI bundle. These modules perform no detection, alignment or confidence computation; they re-express stored fields and assert that no causal phrase ("caused", "is faulty", "is broken", "responsible for") is ever produced.</p>
+<table>
+<tr><th style="width:15%">Tag</th><th>Meaning</th><th style="width:34%">Example (from <code>demo-run-01</code>)</th></tr>
+<tr><td><span class="pill fact">fact</span></td><td>An observation from the data. No interpretation.</td><td>"Hop 3 RTT onset detected at t=41726703720 (method=mad_sustained_v1)."</td></tr>
+<tr><td><span class="pill inf">inference</span></td><td>What the facts are consistent with. Not a measurement.</td><td>"Evidence is consistent with degradation first appearing at or after Hop 3, persisting through Hop 5."</td></tr>
+<tr><td><span class="pill cor">correlation</span></td><td>A timing association; carries the lag in ms.</td><td>"…temporally correlated with the Hop 3 path-level onset (this is an association, not a causal claim)."</td></tr>
+<tr><td><span class="pill conf">confidence</span></td><td>A fixed heuristic score and level.</td><td>level <i>high</i>, score 1.0</td></tr>
+<tr><td><span class="pill unk">unknown</span></td><td>Observations that are missing. Never assumed healthy.</td><td>"No hops were UNKNOWN for this trial."</td></tr>
+</table>
+
+<h2 id="s5f">5.6 Frontend dashboard</h2>
+<p><code>frontend/</code> is a React + TypeScript (strict) + Vite + Tailwind + Motion application. It has no backend. A small Vite plugin serves an explicit allowlist of stored files (the four <code>path_bundle.json</code> files and two aggregate evaluation projections) in development and emits the same files into <code>dist/data/</code> for the production build. The page shows the application's RTT chart, a three-dimensional client-to-server path with selectable hops, a per-hop inspector, the boundary statement, the evidence grouped by kind, the stored confidence and its limits, the stored evaluations, the limitations, and an optional guided explanation. The browser <b>formats and displays</b> stored values; it never recomputes an onset, a status or a confidence. Section 10 walks through it with screenshots.</p>
+
+<h2 id="s5g">5.7 Fault injection and ground-truth isolation</h2>
+<p><code>faultctl/controller.py</code> runs as the OS user <code>hoptrace-truth</code>. It may reach <code>tc</code> inside the four router namespaces <i>only</i>, through a narrow sudoers rule created by <code>faultctl/setup_identities.sh</code>. Each injection records an event (trial, hop, type, magnitude, start/end time on the monotonic clock, the exact <code>tc</code> command) in a SQLite database at <code>/var/lib/hoptrace/groundtruth.db</code>, which is <b>deliberately outside the repository</b> on the native Linux filesystem (mode 0640, directory 0750). The analysis identity <code>hoptrace-engine</code> is not in that group and receives <i>Permission denied</i>; the evaluation identity <code>hoptrace-eval</code> is in the group and may read it. <code>demo/run_demo.sh</code> checks this live before injecting anything.</p>
+<table>
+<tr><th>Impairment</th><th>Applied as (<code>tc</code>, on the router egress interface)</th><th>Parameters recorded</th></tr>
+<tr><td>latency</td><td><code>netem delay D ms</code></td><td>delay_ms</td></tr>
+<tr><td>jitter</td><td><code>netem delay D ms J ms</code></td><td>delay_ms, jitter_ms</td></tr>
+<tr><td>loss</td><td><code>netem loss P %</code></td><td>loss_pct</td></tr>
+<tr><td>bandwidth</td><td><code>tbf rate R kbit burst 32kbit latency 400ms</code></td><td>rate_kbit (burst and latency are fixed defaults)</td></tr>
+</table>
+<p>A fault at "hop N" is applied to the egress interface of <code>ns-rN</code>, i.e. the link <i>leaving</i> Hop N: Hop 1 → <code>ns-r1:veth-s2-a</code>, Hop 2 → <code>ns-r2:veth-s3-a</code>, Hop 3 → <code>ns-r3:veth-s4-a</code>, Hop 4 → <code>ns-r4:veth-s5-a</code>. Hop 5 (the server) is not a target. Consequently the first hop whose measurement can show the fault is <b>N+1</b>, and the evaluation scores against <code>min(N+1, 5)</code>.</p>
+<div class="box note"><div class="bt">What the isolation does and does not guarantee</div>
+<ul>
+<li><b>Does:</b> an unprivileged analysis process cannot read the database (checked live by the demo script); <code>correlate/</code> never imports the ground-truth module.</li>
+<li><b>Does not:</b> root can read the database; trial directory names for historical trials encode the fault type and hop; the evaluation result files in <code>evaluate/</code> contain labels and are readable by any local process. It is a permission test, not a complete security audit.</li>
+</ul></div>
+
+<h2 id="s5h">5.8 Evaluation workflow</h2>
+<ol>
+<li>Record trials (<code>hop.jsonl</code>, <code>app.jsonl</code>, a minimal <code>trial_meta.json</code>) while the fault controller injects (or does not inject) an impairment.</li>
+<li>Run candidate detectors on a <b>tuning</b> set; select one by a fixed rule (primary: within-one-hop accuracy; tie-breaks: false attribution, then Brier score) and write a frozen configuration file.</li>
+<li>Score the frozen configuration once on a <b>held-out</b> set as <code>hoptrace-eval</code>, which is the only place engine output is joined to ground truth.</li>
+<li>Report the metrics, including a Wilson 95% interval, and any failure.</li>
+</ol>
+<p>The metrics are defined in <code>evaluate/metrics.py</code>. A <b>false attribution</b> is a confident (<i>medium</i> or <i>high</i>) claim that is either wrong or made on a clean control. The target for the project is at most 10%.</p>
+
+<!-- ======================= 6 TECHNOLOGIES ======================= -->
+<h1 id="s6" class="nobreak">6. Technologies and Software Requirements</h1>
+<p>Only what the repository actually uses is listed. <b>Required</b> items are needed to run HOPTRACE or its dashboard; <b>optional</b> items are development, verification or documentation tools.</p>
+<div class="tcap"><b>Table 6.1</b> Required: measurement, analysis and testbed (Linux)</div>
+<table>
+<tr><th style="width:30%">Component</th><th style="width:26%">Version used / verified</th><th>Role</th></tr>
+<tr><td>WSL2 Ubuntu 24.04</td><td>kernel 6.18.33.2-microsoft-standard-WSL2</td><td>The only environment on which the testbed was run (README: supported and tested platform)</td></tr>
+<tr><td>Python</td><td>3.12.3</td><td>All measurement, analysis and evaluation code. <b>Standard library only, with no third-party Python packages</b></td></tr>
+<tr><td>iproute2 (<code>ip</code>, <code>tc</code>)</td><td>6.1.0 (libbpf 1.3.0)</td><td>Namespaces, veth pairs, <code>netem</code>/<code>tbf</code></td></tr>
+<tr><td><code>traceroute</code></td><td>as installed in the WSL distribution</td><td>Used only by <code>verify_topology.sh</code></td></tr>
+<tr><td>root, <code>sudo</code>, bash</td><td>-</td><td>Raw sockets, namespaces and <code>tc</code> require root; identities use a restricted sudoers rule</td></tr>
+<tr><td>SQLite (stdlib <code>sqlite3</code>)</td><td>bundled with Python</td><td>Ground-truth event store</td></tr>
+</table>
+<div class="tcap"><b>Table 6.2</b> Required to run the dashboard (declared in <code>frontend/package.json</code>; exact resolved versions are in <code>package-lock.json</code>)</div>
+<table>
+<tr><th style="width:30%">Package</th><th style="width:26%">Declared range</th><th>Role</th></tr>
+<tr><td>Node.js / npm</td><td><code>node ≥ 22.12</code> (verified on 24.14.1 / npm 11.11.0)</td><td>Runtime for build and preview</td></tr>
+<tr><td>react, react-dom</td><td>^19.3.0</td><td>UI framework</td></tr>
+<tr><td>typescript</td><td>~6.0.3 (dev)</td><td>Strict type checking</td></tr>
+<tr><td>vite, @vitejs/plugin-react</td><td>^8.3.4, ^6.1.2 (dev)</td><td>Bundler / dev and preview server</td></tr>
+<tr><td>tailwindcss, @tailwindcss/vite</td><td>^4.3.3 (dev)</td><td>Styling</td></tr>
+<tr><td>motion</td><td>^14.2.0</td><td>Animation (removed under <i>prefers-reduced-motion</i>)</td></tr>
+<tr><td>zod</td><td>^4.6.7</td><td>Runtime validation of stored bundles</td></tr>
+<tr><td>@fontsource-variable/*</td><td>^5.3.0</td><td>Self-hosted fonts (Unbounded, Instrument Sans, JetBrains Mono); no CDN at runtime</td></tr>
+</table>
+<div class="tcap"><b>Table 6.3</b> Optional: verification, development and documentation</div>
+<table>
+<tr><th style="width:30%">Tool</th><th>Used for</th></tr>
+<tr><td>vitest, @testing-library/*, jsdom, axe-core</td><td>Frontend unit, component, accessibility and contrast tests (<code>npm test</code>)</td></tr>
+<tr><td>eslint 9, typescript-eslint, eslint-plugin-jsx-a11y</td><td>Lint with zero warnings allowed (<code>npm run lint</code>)</td></tr>
+<tr><td>Chrome or Edge</td><td><code>npm run check:layout</code> and <code>npm run check:preview</code> (real-browser checks)</td></tr>
+<tr><td>matplotlib, python-pptx, PyMuPDF, a Chromium browser</td><td>Only to regenerate the figures, this report and the presentation (<code>submission/build/</code>). Not needed to run HOPTRACE</td></tr>
+</table>
+<p class="small">The older static page <code>ui/</code> loads GSAP and Google Fonts from CDNs and is kept for history only; the submitted dashboard is <code>frontend/</code>. The environment used for <i>development</i> of this report was Windows 11 with WSL2; the environment <i>required</i> to run the testbed is WSL2 Ubuntu 24.04 (or an equivalent Linux with network namespaces and root). Windows-native Python is not supported.</p>
+
+<!-- ======================= 7 IMPLEMENTATION ======================= -->
+<h1 id="s7" class="nobreak">7. Implementation Details</h1>
+<h2 id="s7a">7.1 Components and responsibilities</h2>
+<table>
+<tr><th style="width:19%">Directory</th><th style="width:30%">Main files</th><th>Responsibility</th></tr>
+<tr><td><code>testbed/phase0/</code></td><td><code>setup_topology.sh</code>, <code>verify_topology.sh</code>, <code>teardown_topology.sh</code>, <code>lib/common.sh</code></td><td>Build, check and remove the six-namespace topology; single source of names and addresses</td></tr>
+<tr><td><code>prober/</code></td><td><code>prober.py</code>, <code>raw_probe.py</code>, <code>hopsample.py</code></td><td>TTL-limited raw-socket probes; <code>HopSample</code> records</td></tr>
+<tr><td><code>app/</code></td><td><code>client.py</code>, <code>server.py</code>, <code>ws_protocol.py</code>, <code>apprttsample.py</code></td><td>WebSocket ping/interaction telemetry; <code>AppRttSample</code> records</td></tr>
+<tr><td><code>faultctl/</code></td><td><code>controller.py</code>, <code>groundtruth.py</code>, <code>setup_identities.sh</code></td><td>Inject/clear <code>tc</code> impairments; ground-truth store; OS identities</td></tr>
+<tr><td><code>correlate/</code></td><td><code>synchronize.py</code>, <code>onset*.py</code>, <code>align.py</code>, <code>evidence.py</code>, <code>pipeline.py</code></td><td>Timeline, onset detection, alignment, typed evidence</td></tr>
+<tr><td><code>present/</code></td><td><code>interpret.py</code>, <code>technical_view.py</code>, <code>path_bundle.py</code>, <code>report.py</code></td><td>Locked sentences; technical view; UI bundle; text report</td></tr>
+<tr><td><code>evaluate/</code></td><td><code>metrics.py</code>, <code>*_analysis*.py</code>, <code>held_out_*.py</code>, frozen configs and results</td><td>Metrics, algorithm selection, held-out scoring (historical record)</td></tr>
+<tr><td><code>demo/</code></td><td><code>run_demo.sh</code>, <code>demo_script.md</code></td><td>Real end-to-end run on the live testbed</td></tr>
+<tr><td><code>frontend/</code></td><td><code>src/</code>, <code>vite/</code>, <code>scripts/</code></td><td>Dashboard, data allowlist, browser checks</td></tr>
+<tr><td><code>experiments/</code></td><td>40 trial directories</td><td>Raw evidence: <code>hop.jsonl</code>, <code>app.jsonl</code>, <code>trial_meta.json</code>, and (for some) <code>evidence*.json</code> and <code>path_bundle.json</code></td></tr>
+<tr><td><code>tools/</code>, <code>docs/</code></td><td><code>check_repo_hygiene.py</code>, <code>EVIDENCE_LEDGER.md</code></td><td>Read-only repository check; what each data set may be used for</td></tr>
+</table>
+
+<h2 id="s7b">7.2 Data flow and file formats</h2>
+<p>There is no database between stages; each stage reads and writes plain files. Times are nanoseconds on <code>CLOCK_MONOTONIC</code>.</p>
+<h4>hop.jsonl: one line per probe (<code>HopSample</code>)</h4>
+<pre>{"round_id":0,"ttl":1,"hop_ip":"10.10.1.2","rtt_ms":0.050222,"responded":true,"probe_index":0,
+ "t_send_mono_ns":16726703720,"t_recv_mono_ns":16726784215}</pre>
+<h4>app.jsonl: one line per application sample (<code>AppRttSample</code>)</h4>
+<pre>{"seq":0,"kind":"ping","t_send_mono_ns":16793313189,"t_recv_mono_ns":16793623395,
+ "rtt_ms":0.310206,"responded":true,"missed_budget":false}</pre>
+<h4>EvidenceRecord (<code>evidence*.json</code>)</h4>
+<pre>{ "trial_id": "...", "generated_at_mono_ns": ..., "claims": [
+    {"tag":"fact", "text":"...", "data_ref":{...}},
+    {"tag":"inference", "hop_range":{"min":3,"max":5}, "text":"..."},
+    {"tag":"correlation", "lag_ms":0.0, "text":"..."},
+    {"tag":"confidence", "level":"high", "score":1.0, "factors":{...}},
+    {"tag":"unknown", "hops":[], "text":"..."} ] }</pre>
+<h4>path_bundle.json (the dashboard's data)</h4>
+<p>Top-level keys: <code>trial_id</code>, <code>plain_language</code> (<code>result_state</code>, <code>summary</code>), <code>hop_range</code>, <code>confidence</code>, <code>alignment_delta_ms</code>, <code>observation_window</code>, <code>evidence_record_claims</code>, <code>app</code>, <code>hops</code>, <code>unknown_hops</code>, <code>evaluation</code>. Each hop entry carries <code>ttl</code>, <code>ip</code>, <code>status</code> (<i>degraded</i> = corroborated onset, <i>healthy</i> = no corroborated onset, <i>unknown</i>), baseline/observed mean RTT, <code>onset_ns</code>, <code>sample_count</code> and templated <code>why_highlighted</code> text. A hop's status is a pure re-expression of existing evidence fields (<code>_hop_status</code> in <code>present/path_bundle.py</code>). There is no JSON Schema file or version field yet; the frontend validates bundles at load time with a Zod schema.</p>
+<h4>Ground-truth schema (<code>faultctl/groundtruth.py</code>)</h4>
+<pre>CREATE TABLE ground_truth_events (
+    event_id TEXT PRIMARY KEY, trial_id TEXT NOT NULL, hop_target INTEGER NOT NULL,
+    impairment_type TEXT NOT NULL, magnitude TEXT NOT NULL,
+    t_start_mono_ns INTEGER NOT NULL, t_end_mono_ns INTEGER, tc_command TEXT NOT NULL );</pre>
+<p>The database is created on first use inside the running testbed environment; it is never committed (<code>*.db</code> is in <code>.gitignore</code>).</p>
+
+<h2 id="s7c">7.3 Key source excerpts</h2>
+<p><b>Sustained onset detection</b> (<code>correlate/onset_candidates_v2.py</code>, the frozen Phase 4b detector; unchanged):</p>
+<pre>def detect_onset_mad_sustained(series, t, k_mad: float = 5.0, min_run: int = 3):
+    values, times = _valid(series, t)
+    if len(values) &lt; MIN_VALID_POINTS:            # 5
+        return None
+    med = st.median(values)
+    mad = st.median([abs(v - med) for v in values]) or 1e-9
+    threshold = med + k_mad * mad
+    run_start = None; run_len = 0
+    for i, v in enumerate(values):
+        if v &gt; threshold:
+            if run_start is None: run_start = i
+            run_len += 1
+            if run_len &gt;= min_run:                # onset = first point of the run
+                return OnsetResult(t_onset_ns=times[run_start],
+                                   confidence_raw=(v - med) / mad, method=METHOD_MAD_SUSTAINED)
+        else:
+            run_start = None; run_len = 0
+    return None</pre>
+<p><b>Alignment with downstream persistence</b> (<code>correlate/align.py</code>, abridged):</p>
+<pre>DELTA_ALIGN_NS = 1_500_000_000          # 1.5 s: documented default, still unvalidated
+
+for candidate in sorted(hop_onsets.keys()):
+    onset = hop_onsets.get(candidate)
+    if onset is None or not _concurrent(onset.t_onset_ns, app_onset.t_onset_ns):
+        continue
+    # every hop from `candidate` to the deepest measured hop must also show a concurrent onset
+    ...
+    if not all_persist:
+        continue                          # isolated spike: keep looking deeper
+    return LocalizationResult(hop_range={"min": candidate, "max": max(corroborating)}, ...)</pre>
+<p><b>Fault injection</b> (<code>faultctl/controller.py</code>, abridged): the controller refuses any hop outside the four authorized targets and refuses to inject if the interface does not exist.</p>
+<pre>AUTHORIZED_TARGETS = {1: ("ns-r1", "veth-s2-a"), 2: ("ns-r2", "veth-s3-a"),
+                      3: ("ns-r3", "veth-s4-a"), 4: ("ns-r4", "veth-s5-a")}
+...
+tc_args = ["qdisc", "add", "dev", iface, "root", "netem", "delay", f"{delay_ms}ms"]   # latency</pre>
+
+<h2 id="s7d">7.4 How the dashboard uses stored results</h2>
+<ul>
+<li><b>Data source.</b> <code>vite/hoptraceData.ts</code> scans <code>experiments/*/path_bundle.json</code> and serves <code>data/index.json</code>, <code>data/bundles/&lt;id&gt;.json</code> and two aggregate projections of the evaluation files. Nothing else is reachable: raw traces (<code>*.jsonl</code>), the ground-truth database and arbitrary paths return no data (probed by about forty URLs in <code>vite/devServer.test.ts</code>).</li>
+<li><b>Validation.</b> Each bundle is checked against a Zod schema at load time; a malformed bundle shows an error state rather than a guess.</li>
+<li><b>No recomputation.</b> The browser formats stored values. Statuses, onsets, confidence and hop range come from the bundle.</li>
+<li><b>Local-path hygiene.</b> The historical demo bundle records an absolute machine path; the file on disk is left unchanged (it is evidence), the served copy keeps only the base name, and <code>npm run verify:dist</code> fails on any local path in <code>dist/</code>.</li>
+<li><b>Illustration vs measurement.</b> Moving packets in the 3-D scene are <b>illustrative only</b>; the bundles contain no packet-level observations, and the page says so next to the animation.</li>
+</ul>
+<h2 id="s7e">7.5 How impairments are configured and evaluated</h2>
+<p>The impairment type, hop and magnitude are chosen per trial and passed to <code>faultctl/controller.py inject</code>; <code>clear-latest</code> removes the open event by trial and hop. The historical trial sets used magnitude classes (<i>mild</i>, <i>moderate</i>, <i>severe</i>) and some <i>transient</i> faults that cover only part of the window; these are encoded in the trial directory names, not in a machine-readable file. For scoring, <code>evaluate/metrics.py</code> reads the ground-truth hop and takes <code>expected_hop = min(hop_target + 1, 5)</code>.</p>

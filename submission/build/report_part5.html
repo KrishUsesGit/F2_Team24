@@ -1,0 +1,191 @@
+<!-- ======================= 13 LIMITATIONS ======================= -->
+<h1 id="s13" class="nobreak">13. Limitations and Threats to Validity</h1>
+<p>Each limitation below is supported by a file in the repository; the source is given in brackets.</p>
+<table>
+<tr><th style="width:4%" class="num">#</th><th style="width:30%">Limitation</th><th>Detail and consequence</th></tr>
+<tr><td class="num">1</td><td><b>No independent validation of the current detector</b></td><td><code>mad_sustained</code> was never scored on data that its design had not seen. The one independent run (Phase 4, <code>mad</code>) missed its target at 3/12 = 25%. A sealed evaluation (spec Phase 5) has not been run. [<code>docs/EVIDENCE_LEDGER.md</code>]</td></tr>
+<tr><td class="num">2</td><td><b>Exposed held-out set</b></td><td><code>p4-held-*</code> is permanently exposed; Phase 4b results on it are a historical record. The set was never sealed or made read-only. [ledger]</td></tr>
+<tr><td class="num">3</td><td><b>Loss and bandwidth are not localized</b></td><td>0/4 on the exposed held-out set (Phase 4 and 4b detectors) and 0/4 on the Phase 4b tuning set (all four candidates). Whether bandwidth limits are observable at all with the current light probe traffic is unproven; bandwidth is not de-scoped, and no investigation is authorized yet. [<code>frozen_config_4b.json</code>]</td></tr>
+<tr><td class="num">4</td><td><b>Confidence is an uncalibrated heuristic</b></td><td>A fixed formula based almost entirely on how many hops were unknown; the corroborating fraction is 1.0 whenever a range is reported. It is not a probability and does not reflect signal strength. Phase 4's <i>high</i> claims were 50% accurate. [<code>correlate/evidence.py</code>]</td></tr>
+<tr><td class="num">5</td><td><b>Unknown hops cannot be assumed healthy</b></td><td>A hop with too few responses is unknown, and "no corroborated onset" is not proof of health. A silent hop can also prevent localization, as in <code>p4-held-12</code>.</td></tr>
+<tr><td class="num">6</td><td><b>Timing correlation is not causation</b></td><td>HOPTRACE says when changes appear along an observed path. It does not establish which device, link or configuration caused them.</td></tr>
+<tr><td class="num">7</td><td><b>"No onset" is ambiguous</b></td><td>It can mean healthy, a fault covering most of the window (global median/MAD baseline), or too little data. There is no "insufficient data" state. [demo script; ledger]</td></tr>
+<tr><td class="num">8</td><td><b>Fixed, unvalidated parameters</b></td><td>The 1.5 s alignment window, the 500 ms bucket width (which also limits onset resolution), <code>k_mad = 5</code>, <code>min_run = 3</code> and the 50% unknown threshold are fixed choices. [<code>align.py</code>, <code>pipeline.py</code>]</td></tr>
+<tr><td class="num">9</td><td><b>Very small samples</b></td><td>12 + 12 + 10 trials against a specified 120-trial tuning set and 288-cell matrix. Confidence intervals are wide (Section 12). [<code>evaluate/power_calc.py</code>]</td></tr>
+<tr><td class="num">10</td><td><b>Controlled single-path testbed</b></td><td>One linear path, no ECMP, one application protocol, and ICMP error rate limiting deliberately switched off in the router and server namespaces. Behaviour on real routers and networks has not been evaluated. [<code>setup_topology.sh</code>]</td></tr>
+<tr><td class="num">11</td><td><b>Ground-truth isolation is a permission test</b></td><td>Root can read the database; historical trial directory names encode the injected fault; evaluation result files contain labels and are world-readable on a Windows-mounted checkout. [README]</td></tr>
+<tr><td class="num">12</td><td><b>Phase order and labels</b></td><td>The UI and demo (Phase 6) were built before the Phase 5 evaluation, which the specification would not have allowed; several code comments use pre-numbering labels. [ledger]</td></tr>
+<tr><td class="num">13</td><td><b>Demo scenario is favourable</b></td><td>The demo fault covers a minority of the window by construction; the first version (a majority) produced a false negative. [<code>demo/demo_script.md</code>]</td></tr>
+<tr><td class="num">14</td><td><b>Dashboard limits</b></td><td>It shows four stored trials, not live measurements; it has not been tested offline or across browsers; hop roles are a frontend constant, not a data field; there is no real "not localized" bundle and none was invented; the page is one ~500 kB script. [<code>frontend/README.md</code>]</td></tr>
+<tr><td class="num">15</td><td><b>Documentation drift</b></td><td>The evidence ledger counts six exploratory <code>p3-*</code> trials, but five directories exist in <code>experiments/</code>; the figure used in this report is the directory count.</td></tr>
+</table>
+
+<!-- ======================= 14 INSTALLATION ======================= -->
+<h1 id="s14">14. Installation and Execution Guide</h1>
+<h2 id="s14a">14.1 Environments</h2>
+<table>
+<tr><th style="width:24%">Part</th><th>Verified environment (27 Oct 2026)</th><th style="width:30%">Not verified</th></tr>
+<tr><td>Testbed, probing, telemetry, Python tests</td><td>Windows 11 + <b>WSL2 Ubuntu 24.04</b> (kernel 6.18.33.2-microsoft-standard-WSL2), Python 3.12.3, iproute2 6.1.0</td><td>Native Linux, macOS, WSL1, other Python versions, a fresh Ubuntu install</td></tr>
+<tr><td>Dashboard and its checks</td><td><b>Windows 11</b>, Node 24.14.1, npm 11.11.0, Chrome (for the browser checks)</td><td>Node below 22.12; other OSes and browsers</td></tr>
+</table>
+<p>Windows-native Python is <b>not</b> supported (the code uses <code>time.clock_gettime_ns</code> and Linux network namespaces). Raw sockets, namespaces and <code>tc</code> need root. Network namespaces and <code>tc</code> state are <b>lost whenever WSL restarts</b>; rebuild the topology each session.</p>
+
+<h2 id="s14b">14.2 Get the code</h2>
+<pre class="cmd">git clone https://github.com/KrishUsesGit/F2_Team24.git F2_Team24
+cd F2_Team24</pre>
+<p>Clone to an ordinary path. A OneDrive-synced folder risks sync conflicts and locks on <code>.git</code> and <code>node_modules</code>. Inside WSL a clone on the Linux filesystem (for example <code>~/hoptrace</code>) is preferable to <code>/mnt/c/…</code>; the ground-truth database is created under <code>/var/lib/hoptrace</code> in any case, never in the repository.</p>
+
+<h2 id="s14c">14.3 Run the unit tests (safe, no root)</h2>
+<pre class="cmd"># in WSL2, from the repository root, as a normal user
+for d in prober/tests app/tests correlate/tests evaluate present/tests faultctl/tests; do
+  PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s "$d" -p 'test_*.py' || break
+done
+python3 tools/check_repo_hygiene.py</pre>
+<p><b>Expected:</b> six <code>OK</code> blocks reading <code>Ran 9 tests</code>, <code>Ran 10</code>, <code>Ran 38</code>, <code>Ran 16</code>, <code>Ran 29</code>, <code>Ran 15</code> (117 in total), then <code>OK: no per-user paths, no CR characters, .gitattributes present</code>.</p>
+
+<h2 id="s14d">14.4 Build and verify the testbed (modifies the WSL system)</h2>
+<pre class="cmd"># as root in WSL2, from the repository root
+sudo bash faultctl/setup_identities.sh        # creates hoptrace-truth / -engine / -eval, /var/lib/hoptrace (0750),
+                                              # and /etc/sudoers.d/hoptrace-truth (tc inside ns-r1..ns-r4 only)
+sudo bash testbed/phase0/teardown_topology.sh # safe if nothing exists
+sudo bash testbed/phase0/setup_topology.sh    # NOT idempotent: always tear down first
+sudo bash testbed/phase0/verify_topology.sh</pre>
+<p><b>Expected</b> (observed on 27 Oct 2026 for the last three commands): <code>topology up.</code>; <code>icmp_ratelimit calibration: 0 (ns-r1, expect 0)</code>; <code>200 packets transmitted, 200 received, 0% packet loss</code> with <code>PASS: zero-loss baseline</code>; then the hop sequence <code>10.10.1.2 10.10.2.2 10.10.3.2 10.10.4.2 10.10.5.2</code> twice with <code>PASS</code>. <code>setup_identities.sh</code> was not re-run for this report (the identities already existed on the verification machine).</p>
+
+<h2 id="s14e">14.5 Run the live demo</h2>
+<pre class="cmd">sudo bash demo/run_demo.sh      # as root in WSL2, about 60-90 s</pre>
+<p>The script rebuilds the topology, proves live that <code>hoptrace-engine</code> cannot read the ground-truth database, starts the app server, prober and client, injects a real 90 ms latency fault on Hop 2's egress after 25 s, runs the frozen detector as <code>hoptrace-engine</code>, writes <code>path_bundle.json</code>, clears the fault and measures recovery. <b>It overwrites <code>experiments/demo-run-01/</code></b> (the recorded trial) and has no cleanup trap if it fails midway. <b>It was not re-run for this report;</b> the expected result is described in <code>demo/demo_script.md</code> and matches the recorded trial (<i>"Degradation appears to begin at or after Hop 3"</i>, high confidence, recovery from about 78.5 ms to about 0.01 ms at Hop 3). To keep the recorded trial, copy <code>experiments/demo-run-01/</code> elsewhere before running.</p>
+
+<h2 id="s14f">14.6 View the dashboard</h2>
+<pre class="cmd">cd frontend
+npm ci                  # installs exactly what package-lock.json records
+npm run verify          # typecheck, lint, test, build, verify:dist
+npm run preview         # serves dist/ at http://127.0.0.1:4173/   (run `npm run build` first if you skip verify)</pre>
+<p>Open <code>http://127.0.0.1:4173/</code>. For development with the same data use <code>npm run dev</code>. <b>Expected</b> (observed): <code>verify:dist OK: 21 files (4 bundles, 2 evaluation projections, 1 index); no raw traces, databases, labels, credentials or remote runtime dependencies.</code> The page must be served by <code>vite</code>; opening <code>index.html</code> directly does not load the data. The server must keep running: if it stops, every trial fails with "The data files could not be reached". The dashboard reads <code>../experiments</code> and <code>../evaluate</code> at build time, so keep <code>frontend/</code> inside the repository checkout. The legacy static page is served with <code>python3 -m http.server 8420</code> from the repository root (<code>/ui/index.html</code>).</p>
+
+<h2 id="s14g">14.7 Selecting and running experiments</h2>
+<ul>
+<li><b>The recorded trials</b> in <code>experiments/</code> can be analysed again without a testbed. The four trials shown by the dashboard are those with a <code>path_bundle.json</code>.</li>
+<li><b>Run your own trial</b> on a built testbed (each command in the namespace shown; paths from the repository root, as root unless noted):</li>
+</ul>
+<pre class="cmd">mkdir -p experiments/my-trial
+ip netns exec ns-server python3 app/server.py --host 0.0.0.0 --port 8765 &amp;
+ip netns exec ns-client python3 prober/prober.py --dst 10.10.5.2 --src 10.10.1.1 --transport tcp_syn \
+    --rounds 70 --interval 0.5 --out experiments/my-trial/hop.jsonl &amp;
+ip netns exec ns-client python3 app/client.py --host 10.10.5.2 --port 8765 --duration 35 \
+    --out experiments/my-trial/app.jsonl &amp;
+# after ~25 s, inject a fault as the controller identity (hop 1-4; latency/jitter/loss/bandwidth):
+su -s /bin/bash hoptrace-truth -c "cd faultctl &amp;&amp; python3 controller.py inject --hop 2 --type latency --delay-ms 90 --trial-id my-trial"
+# when the trial ends, clear it:
+su -s /bin/bash hoptrace-truth -c "cd faultctl &amp;&amp; python3 controller.py clear-latest --hop 2 --trial-id my-trial"</pre>
+<p>To analyse with the frozen configuration, mirror steps 5-6 of <code>demo/run_demo.sh</code> (<code>demo/_run_engine_pipeline.py</code>, then <code>present/path_bundle.py</code>). These manual commands are derived from the scripts' own argument parsers and docstrings; they were <b>not</b> executed for this report. Do not run the <code>evaluate/</code> scripts on new data without reading Section 11 first.</p>
+
+<h2 id="s14h">14.8 Troubleshooting</h2>
+<table>
+<tr><th style="width:36%">Symptom</th><th>Cause and fix</th></tr>
+<tr><td>Only ~60% of probes get replies; hops look "unknown"</td><td>Kernel ICMP rate limiting. <code>setup_topology.sh</code> sets <code>icmp_ratelimit=0</code>; confirm with the "expect 0" line, and rebuild after a WSL restart.</td></tr>
+<tr><td><code>ip netns</code> shows nothing; <code>Cannot find device</code>; controller says "is the topology up?"</td><td>WSL restarted, so namespaces are gone. Run teardown then setup again.</td></tr>
+<tr><td>Errors from <code>ip netns add</code> or <code>ip link add</code> about something already existing</td><td><code>setup_topology.sh</code> is not idempotent. Run <code>teardown_topology.sh</code> first.</td></tr>
+<tr><td>Permission errors from the prober or <code>ip netns exec</code></td><td>Raw sockets and namespaces need root.</td></tr>
+<tr><td>Ground-truth permission errors (expected for the engine); database missing</td><td>Run <code>setup_identities.sh</code>. Keep the database on the Linux filesystem: <code>/mnt/c</code> ignores <code>chmod</code> and cannot enforce isolation.</td></tr>
+<tr><td>Dashboard: "The data files could not be reached"</td><td>The preview server stopped. Restart <code>npm run preview</code> and reload.</td></tr>
+<tr><td><code>npm</code> install is slow or conflicts</td><td>The repository is inside a OneDrive-synced folder. Clone elsewhere and run <code>npm ci</code> there. Node must be ≥ 22.12.</td></tr>
+<tr><td>Port 4173 or 8420 already in use</td><td>Stop the other server, or pass a different port to <code>vite preview</code> / <code>http.server</code>.</td></tr>
+<tr><td>Shell scripts fail with <code>\r</code> errors</td><td>The <code>.sh</code> files must keep LF endings; <code>.gitattributes</code> enforces this on checkout.</td></tr>
+<tr><td>Detector reports "no significant degradation" for an obvious fault</td><td>The fault probably covers most of the window, so the global median is inside the fault (Section 9.5). Use a longer baseline.</td></tr>
+</table>
+<h2 id="s14i">14.9 Cleanup</h2>
+<pre class="cmd">sudo bash testbed/phase0/teardown_topology.sh                     # removes all six namespaces (verified)
+# if a fault was left behind (only needed when namespaces still exist):
+sudo ip netns exec ns-r2 tc qdisc del dev veth-s3-a root          # example for Hop 2; use the interface from Section 5.7
+pkill -f app/server.py; pkill -f prober/prober.py; pkill -f app/client.py</pre>
+<p>Removing the three identities, the sudoers rule and <code>/var/lib/hoptrace</code> is optional and <b>permanently deletes recorded ground-truth events</b>; it was not exercised for this report (the scored labels also live in <code>evaluate/*.json</code>). The topology teardown above was verified.</p>
+
+<!-- ======================= 15 CONCLUSION ======================= -->
+<h1 id="s15" class="nobreak">15. Conclusion and Future Work</h1>
+<h2 id="s15a">15.1 Conclusion</h2>
+<p>HOPTRACE demonstrates, on a controlled testbed, how an application's RTT and a path's per-hop RTT can be measured on a shared clock and compared to estimate <b>where along an observed path application degradation appears to begin</b>. The engineering is complete enough to run end to end: a six-namespace testbed, a raw-socket prober, a hand-written WebSocket application, a permission-isolated fault controller, a median/MAD correlation engine with typed evidence, an evidence-bounded interpretation layer and a dashboard that shows stored results. The checks run for this report all pass: 117 Python tests, 310 frontend tests, strict typecheck, zero-warning lint, a verified production build and distribution, 40 real-browser layout checks, a four-trial browser session and a live topology check.</p>
+<p>The <b>science</b> is less settled than the engineering, and the project states so. The only independent evaluation <b>missed</b> its false-attribution target (3/12 = 25% against at most 10%). The revised detector met the numeric target only on a set it had been designed against (1/12 = 8.3%), which is not validation. Loss and bandwidth faults are not localized. Confidence is a fixed heuristic. These are results, not omissions, and the interface repeats them wherever a result is shown.</p>
+<h2 id="s15b">15.2 Future work (recorded, not yet authorized)</h2>
+<ol>
+<li>Propose a feasible evaluation scope against the locked specification, with expected runtime and statistical limits, and obtain approval before any large run.</li>
+<li>Implement spec Phase 5: a <b>sealed</b> evaluation set, an evaluation harness and a calibration check of the confidence heuristic.</li>
+<li>Investigate whether controlled background traffic and a throughput-sensitive measurement make bandwidth impairment observable (and whether RTT is the wrong observable for loss).</li>
+<li>Add an explicit <b>"insufficient data"</b> result state so that "no onset" is no longer ambiguous.</li>
+<li>Validate or replace the fixed 1.5 s alignment window and the global-baseline assumption.</li>
+<li>Test the dashboard with the network disabled, across browsers, and from a clean clone; add a versioned schema for the stored bundle.</li>
+</ol>
+
+<!-- ======================= 16 REFERENCES ======================= -->
+<h1 id="s16" class="nobreak">16. References and Technical Documentation</h1>
+<p>Only sources that the implementation, the protocol code or the evaluation statistics actually rely on are listed.</p>
+<h3>Protocols and operating-system documentation</h3>
+<ol>
+<li>I. Fette and A. Melnikov, <i>The WebSocket Protocol</i>, RFC 6455, IETF, December 2011. (Implemented by hand in <code>app/ws_protocol.py</code>.)</li>
+<li>J. Postel, <i>Internet Control Message Protocol</i>, RFC 792, IETF, September 1981. (ICMP Time-Exceeded and Destination-Unreachable parsed in <code>prober/raw_probe.py</code>.)</li>
+<li>R. Braden, D. Borman and C. Partridge, <i>Computing the Internet Checksum</i>, RFC 1071, IETF, September 1988. (Checksum for the hand-built IP and TCP headers.)</li>
+<li>W. Eddy (ed.), <i>Transmission Control Protocol (TCP)</i>, RFC 9293, IETF, August 2022. (TCP-SYN probe transport.)</li>
+<li>S. Hemminger, "Network Emulation with NetEm", <i>linux.conf.au</i>, 2005; and the Linux manual pages <code>tc-netem(8)</code>, <code>tc-tbf(8)</code>, <code>ip-netns(8)</code>, <code>veth(4)</code>, <code>network_namespaces(7)</code>, <code>clock_gettime(2)</code> (<code>CLOCK_MONOTONIC</code>) and the kernel <code>ip-sysctl</code> documentation for <code>icmp_ratelimit</code>.</li>
+<li>Python 3 standard-library documentation: <code>socket</code>, <code>asyncio</code>, <code>statistics</code>, <code>sqlite3</code>, <code>unittest</code>.</li>
+</ol>
+<h3>Statistical and changepoint methods (candidates compared in Phase 4)</h3>
+<ol start="7">
+<li>F. R. Hampel, "The influence curve and its role in robust estimation", <i>Journal of the American Statistical Association</i> 69(346), 1974. (Median absolute deviation as a robust scale.)</li>
+<li>E. S. Page, "Continuous inspection schemes", <i>Biometrika</i> 41(1-2), 1954. (CUSUM.)</li>
+<li>R. P. Adams and D. J. C. MacKay, "Bayesian Online Changepoint Detection", arXiv:0710.3742, 2007. (BOCPD candidate.)</li>
+<li>R. Killick, P. Fearnhead and I. A. Eckley, "Optimal detection of changepoints with a linear computational cost", <i>JASA</i> 107(500), 2012. (PELT candidate.)</li>
+<li>E. B. Wilson, "Probable inference, the law of succession, and statistical inference", <i>JASA</i> 22(158), 1927. (Wilson score interval, <code>evaluate/metrics.py</code>.)</li>
+<li>G. W. Brier, "Verification of forecasts expressed in terms of probability", <i>Monthly Weather Review</i> 78(1), 1950. (Brier score.)</li>
+</ol>
+<h3>Project documents (in the repository)</h3>
+<ol start="13">
+<li><code>hoptrace-phase-0-5-spec.html</code>: the locked specification (phase numbering, constraints, <code>EvidenceRecord</code> definition).</li>
+<li><code>docs/EVIDENCE_LEDGER.md</code>: what each data set and result may be used for.</li>
+<li><code>demo/demo_script.md</code>, <code>frontend/README.md</code>, <code>README.md</code>, <code>AUDIT_REPORT.md</code> (2026-10-14 project audit).</li>
+</ol>
+<h3>Software used by the dashboard (documentation)</h3>
+<ol start="16">
+<li>React (react.dev), Vite (vite.dev), Tailwind CSS (tailwindcss.com), Zod (zod.dev), Vitest (vitest.dev).</li>
+</ol>
+
+<!-- ======================= 17 APPENDIX ======================= -->
+<h1 id="s17">17. Appendix</h1>
+<h2 id="s17a">A. Repository structure</h2>
+<pre class="cmd">.
+├── README.md                     overview, scientific status, how to run
+├── docs/EVIDENCE_LEDGER.md       what each data set / result may be used for
+├── hoptrace-phase-0-5-spec.html  locked specification (also -architecture-review, -phase-0-plan)
+├── testbed/phase0/               setup / verify / teardown scripts, lib/common.sh, impair/clear helpers
+├── prober/   app/   faultctl/    measurement and fault-injection code, each with tests/
+├── correlate/                    synchronize, onset*, align, evidence, pipeline (+ tests/)
+├── present/                      interpret, technical_view, path_bundle, report (+ tests/)
+├── evaluate/                     metrics, selection/scoring scripts, frozen configs, result JSON
+├── demo/                         run_demo.sh, demo_script.md
+├── experiments/                  40 trial directories (hop.jsonl, app.jsonl, trial_meta.json, ...)
+├── frontend/                     React + TypeScript dashboard (package.json, package-lock.json, src/, vite/, scripts/)
+├── ui/                           legacy static page (kept for history)
+├── tools/check_repo_hygiene.py   read-only repository check
+└── submission/                   this report, the presentation, screenshots, figures, build scripts</pre>
+<h2 id="s17b">B. Important configuration files</h2>
+<table>
+<tr><th style="width:36%">File</th><th>Purpose</th></tr>
+<tr><td><code>evaluate/frozen_config.json</code></td><td>Phase 4: <code>mad</code>, <code>k_mad = 5.0</code>, <code>delta_align_ns = 1.5e9</code>, tuning set and scoreboard</td></tr>
+<tr><td><code>evaluate/frozen_config_4b.json</code></td><td>Phase 4b: <code>mad_sustained</code>, <code>k_mad = 5.0</code>, <code>min_run = 3</code>, git commit <code>74c2395</code>, environment, the unresolved loss/bandwidth limitation</td></tr>
+<tr><td><code>evaluate/held_out_results.json</code>, <code>…_4b.json</code></td><td>Scored held-out results (historical; <b>overwritten if the scoring scripts are re-run</b>)</td></tr>
+<tr><td><code>testbed/phase0/lib/common.sh</code></td><td>Single source of namespace names and addressing</td></tr>
+<tr><td><code>faultctl/setup_identities.sh</code></td><td>OS identities and the restricted sudoers rule</td></tr>
+<tr><td><code>frontend/package.json</code>, <code>package-lock.json</code></td><td>Dependency manifest and exact lockfile; <code>engines.node &gt;= 22.12</code></td></tr>
+<tr><td><code>frontend/vite.config.ts</code>, <code>vite/*.ts</code></td><td>Data allowlist, dev-server binding and exposure guard</td></tr>
+<tr><td><code>.gitignore</code>, <code>.gitattributes</code></td><td>No secrets, <code>*.db</code>, <code>node_modules</code>, <code>dist</code>; LF line endings and byte-exact evidence</td></tr>
+</table>
+<h2 id="s17c">C. Test commands</h2>
+<p>See Section 11.3. Summary: Python tests per directory with <code>unittest discover</code>; <code>python3 tools/check_repo_hygiene.py</code>; in <code>frontend/</code>: <code>npm run verify</code>, <code>npm run check:layout</code>, <code>npm run check:preview</code>.</p>
+<h2 id="s17d">D. Additional dashboard screenshots</h2>
+<figure><img class="shot" src="../screenshots/10-stored-evaluation.png" style="width:90%"><figcaption><b>Figure D1.</b> Stored evaluation panels: Phase 4 labelled "False-attribution target not met"; Phase 4b labelled "Numeric thresholds met on an exposed set" and "not independent validation".</figcaption></figure>
+<figure><img class="shot" src="../screenshots/11-limitations.png" style="width:90%"><figcaption><b>Figure D2.</b> Limitations panel: loss and bandwidth not localized; no onset is not proof of health; confidence is a heuristic; nothing independently validates the current detector; the alignment window is a fixed choice.</figcaption></figure>
+<div class="grid2">
+<figure><img class="shot" src="../screenshots/05-no-degradation-result.png"><figcaption><b>Figure D3.</b> Clean control (<code>p4-held-01-clean1</code>): "No significant degradation detected", with the caveat that no onset does not prove health.</figcaption></figure>
+<figure><img class="shot" src="../screenshots/06-partially-localized-result.png"><figcaption><b>Figure D4.</b> <code>p4-held-12-unknown-plus-impair</code>: "Partially localized"; Hops 1 and 2 are unknown, "not assumed healthy".</figcaption></figure>
+</div>
+<h2 id="s17e">E. How this report was produced</h2>
+<p>The report is generated by <code>submission/build/build_report.py</code> from hand-written HTML (<code>report_part*.html</code>) and a stylesheet; diagrams are drawn from the topology constants, measured-data figures by <code>make_figures.py</code> from the files in <code>experiments/</code> and <code>evaluate/</code>, and the PDF is printed with headless Chrome. Before printing, the build asserts every headline number against the result files. Screenshots were captured from the running production build and are stored unedited in <code>submission/screenshots/</code>.</p>

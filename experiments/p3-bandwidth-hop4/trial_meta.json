@@ -1,0 +1,7 @@
+{
+  "trial_id": "p3-bandwidth-hop4",
+  "transport": "tcp_syn",
+  "duration_s": 35,
+  "prober_rounds": 70,
+  "note": "safe operational metadata only"
+}

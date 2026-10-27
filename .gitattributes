@@ -1,0 +1,27 @@
+# Line endings. Shell scripts are executed by bash inside WSL2: a CRLF
+# checkout (core.autocrlf=true on Windows) would break them.
+* text=auto
+*.sh   text eol=lf
+*.py   text eol=lf
+*.md   text eol=lf
+*.html text eol=lf
+*.js   text eol=lf
+*.css  text eol=lf
+*.json text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
+*.mjs  text eol=lf
+*.cjs  text eol=lf
+*.svg  text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Evidence is stored byte-for-byte: never converted on any platform.
+experiments/**                   -text
+evaluate/held_out_results*.json  -text
+evaluate/frozen_config*.json     -text
+
+# Binary files
+*.docx  binary
+*.png   binary
+*.woff2 binary

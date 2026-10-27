@@ -1,0 +1,141 @@
+<h2 id="s10d">10.4 Stored evidence, kept apart by kind</h2>
+<p>Below the boundary statement ("Degradation appears to begin at or after Hop 3. This is the earliest hop whose onset is corroborated in the stored data. It is a statement about when changes were observed, not a finding about the reason for them.") the page separates the evidence into <b>measured facts</b>, <b>inference</b>, <b>temporal correlation</b> and <b>unknown</b>, and shows the <b>stored confidence</b> with its limits: level and score, an explicit statement that it is a fixed heuristic and not a probability, the corroborating and unknown hops, and the completeness fraction.</p>
+<figure><img class="shot" src="../screenshots/07-evidence-by-kind.png" style="width:90%"><figcaption><b>Figure 9.</b> Evidence panels for <code>demo-run-01</code>. The unknown panel states that missing observations are reported as unknown, "not assumed healthy". The confidence panel states that the score is "a fixed heuristic … not a probability … not calibrated".</figcaption></figure>
+
+<h2 id="s10e">10.5 Guided explanation mode</h2>
+<p>The <i>Guided explanation</i> toggle (off by default) adds a plain-language walkthrough built <b>only from the selected bundle</b>: it states the symptom the application saw, what each hop shows, what the stored result infers, how far to trust it, and what the result does <b>not</b> show. A five-step walkthrough (<i>Previous / Next / Exit</i>) moves through the same material and can scroll to the matching part of the page. A clean-control trial is explained in distinct wording (no degradation detected, which does not prove health).</p>
+<figure><img class="shot" src="../screenshots/08-guided-explanation-overview.png" style="width:90%"><figcaption><b>Figure 10.</b> Guided explanation overview for <code>demo-run-01</code>, including "What this does not show": correlation is not causation; unknown is not healthy; the current detector has not been independently validated.</figcaption></figure>
+<figure><img class="shot" src="../screenshots/09-guided-explanation-step.png" style="width:90%"><figcaption><b>Figure 11.</b> Walkthrough step 2 of 5, "What each hop shows", with <i>Previous</i>, <i>Next</i> and <i>Exit walkthrough</i> controls. The guided-explanation components are in the working tree of the repository and are covered by <code>guided.test.tsx</code> (11 tests) and by <code>check:preview</code>.</figcaption></figure>
+<p>Further captures (stored evaluation, limitations, the no-degradation result and the partially-localized result) are in Appendix D.</p>
+
+<!-- ======================= 11 TESTING ======================= -->
+<h1 id="s11" class="nobreak">11. Testing and Verification</h1>
+<p>This section reports checks that were <b>actually run on 27 October 2026</b> for this report, in the environments named. Earlier counts quoted in other project documents were not reused. Unit tests, integration and browser checks, and the experimental evaluation are kept separate; the experimental results are in Section 12.</p>
+<div class="tcap"><b>Table 11.1</b> Verification layers and their results</div>
+<table>
+<tr><th style="width:24%">Layer</th><th style="width:30%">Command</th><th>Result (27 Oct 2026)</th></tr>
+<tr><td>Python unit tests</td><td><code>python3 -B -m unittest discover</code> per test directory</td><td class="ok"><b>117 tests, all OK</b> (WSL2 Ubuntu 24.04, Python 3.12.3, unprivileged user)</td></tr>
+<tr><td>Repository hygiene</td><td><code>python3 tools/check_repo_hygiene.py</code></td><td class="ok">OK: 59 source files, no per-user paths, no CR characters, <code>.gitattributes</code> present</td></tr>
+<tr><td>Frontend typecheck</td><td><code>npm run typecheck</code></td><td class="ok">passes (<code>tsc -b --force</code>, strict)</td></tr>
+<tr><td>Frontend lint</td><td><code>npm run lint</code></td><td class="ok">passes with <code>--max-warnings 0</code></td></tr>
+<tr><td>Frontend tests</td><td><code>npm test</code></td><td class="ok"><b>310 tests in 14 files, all passed</b> (vitest 5.0.4, jsdom)</td></tr>
+<tr><td>Production build</td><td><code>npm run build</code></td><td class="ok">built; one ~511 kB script (not code-split; vite warns about chunk size)</td></tr>
+<tr><td>Distribution safety</td><td><code>npm run verify:dist</code></td><td class="ok">OK: 21 files (4 bundles, 2 evaluation projections, 1 index); no raw traces, databases, labels, credentials or remote runtime dependencies</td></tr>
+<tr><td>Real-browser layout</td><td><code>npm run check:layout</code></td><td class="ok">OK: 40 checks (10 widths × 4 real trials): no horizontal overflow, no overlapping hop labels or text, all hop controls ≥ 44 px</td></tr>
+<tr><td>Real-browser interaction</td><td><code>npm run check:preview</code></td><td class="ok">OK: 4 trials switched in one session against <code>vite preview</code>; every bundle HTTP 200 JSON and rendered; packet pause/resume; guided walkthrough steps 1-5; prohibited URLs return no data</td></tr>
+<tr><td>Live testbed</td><td><code>setup_topology.sh</code> + <code>verify_topology.sh</code></td><td class="ok">PASS: 200/200 packets (0% loss); five hops in order, twice (Section 8.5)</td></tr>
+</table>
+<h2 id="s11a">11.1 Python unit tests: what they cover</h2>
+<table>
+<tr><th style="width:20%">Directory</th><th class="num" style="width:9%">Tests</th><th>Modules under test</th></tr>
+<tr><td><code>prober/tests</code></td><td class="num">9</td><td><code>hopsample.py</code> (record shape and (de)serialization), <code>raw_probe.py</code> (checksum and ICMP parsing)</td></tr>
+<tr><td><code>app/tests</code></td><td class="num">10</td><td><code>ws_protocol.py</code> (RFC 6455 framing and handshake), <code>apprttsample.py</code></td></tr>
+<tr><td><code>correlate/tests</code></td><td class="num">38</td><td><code>synchronize</code>, <code>onset</code>, the Phase 4 and Phase 4b candidate detectors, <code>align</code>, <code>evidence</code></td></tr>
+<tr><td><code>evaluate</code></td><td class="num">16</td><td><code>metrics.py</code> (false attribution, hop matching, Wilson interval, summaries)</td></tr>
+<tr><td><code>present/tests</code></td><td class="num">29</td><td><code>interpret</code> (locked sentences, forbidden causal phrases), <code>technical_view</code>, <code>path_bundle</code> (hop status re-expresses stored evidence; run against real recorded trials)</td></tr>
+<tr><td><code>faultctl/tests</code></td><td class="num">15</td><td><code>controller.py</code> (authorized targets, <code>tc</code> argument construction; <code>tc</code> is mocked) and <code>groundtruth.py</code> (store, with the database path patched to a temporary directory)</td></tr>
+<tr><td><b>Total</b></td><td class="num"><b>117</b></td><td></td></tr>
+</table>
+<p class="small">The tests were run from a Windows-mounted path inside WSL2 (<code>/mnt/c/…</code>) as a normal user (uid 1000) with bytecode writing disabled; the <code>faultctl</code> tests print a stray event UUID, which is expected. They do not need root and cannot write the real ground-truth database. They do <b>not</b> exercise the live network testbed.</p>
+<h2 id="s11b">11.2 Frontend tests: what they cover</h2>
+<table>
+<tr><th style="width:36%">Test file</th><th class="num" style="width:8%">Tests</th><th>Covers</th></tr>
+<tr><td><code>vite/dataAllowlist.test.ts</code></td><td class="num">49</td><td>Which stored files may be served; traversal and non-allowlisted paths refused</td></tr>
+<tr><td><code>vite/devServer.test.ts</code></td><td class="num">40</td><td>Starts the real dev server and probes about forty traversal / ground-truth / trace / config URLs</td></tr>
+<tr><td><code>vite/previewServer.test.ts</code></td><td class="num">38</td><td>Builds the site and fetches all four bundles over HTTP from <code>vite preview</code></td></tr>
+<tr><td><code>vite/devSourceGuard.test.ts</code></td><td class="num">29</td><td>Dev server hides its own non-source files</td></tr>
+<tr><td><code>src/components/RttChart.test.tsx</code></td><td class="num">34</td><td>RTT chart geometry and rendering</td></tr>
+<tr><td><code>src/stageC.test.tsx</code></td><td class="num">26</td><td>The visual experience: path, hop inspector, statements, accessibility</td></tr>
+<tr><td><code>src/App.test.tsx</code></td><td class="num">19</td><td>Application states: loading, error, trial switching</td></tr>
+<tr><td><code>src/data/loader.test.ts</code></td><td class="num">19</td><td>Typed data loader and error handling</td></tr>
+<tr><td><code>src/design/tokens.test.ts</code></td><td class="num">16</td><td>WCAG AA contrast of the design tokens (reads the CSS)</td></tr>
+<tr><td><code>src/data/schema.test.ts</code></td><td class="num">14</td><td>Bundle schema validation (Zod) against real artifacts</td></tr>
+<tr><td><code>src/guided.test.tsx</code></td><td class="num">11</td><td>Guided explanation and walkthrough</td></tr>
+<tr><td><code>src/components/primitives/primitives.test.tsx</code></td><td class="num">9</td><td>Badge, pill, sticker and disclosure components</td></tr>
+<tr><td><code>src/data/evaluationStatus.test.ts</code>, <code>src/styles/packets.test.ts</code></td><td class="num">3 + 3</td><td>Evaluation status projection; packet animation rules</td></tr>
+<tr><td><b>Total</b></td><td class="num"><b>310</b></td><td>14 files</td></tr>
+</table>
+<h2 id="s11c">11.3 Reproducible commands</h2>
+<pre class="cmd"># Python tests (WSL2, from the repository root, no root needed)
+for d in prober/tests app/tests correlate/tests evaluate present/tests faultctl/tests; do
+  PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest discover -s "$d" -p 'test_*.py' || break
+done
+python3 tools/check_repo_hygiene.py
+
+# Frontend (from frontend/, Node >= 22.12)
+npm ci
+npm run verify          # typecheck, lint, test, build, verify:dist
+npm run check:layout    # needs Chrome or Edge
+npm run check:preview   # needs Chrome or Edge</pre>
+<div class="box warn"><div class="bt">Not verified in this report</div>
+<ul>
+<li><b>The full live demo</b> (<code>demo/run_demo.sh</code>) was not re-run: it creates identities, rebuilds the topology and <b>overwrites</b> the recorded <code>experiments/demo-run-01</code>. The recorded trial is documented as produced by an earlier real run.</li>
+<li><b>The historical evaluation scripts</b> (<code>evaluate/tuning_analysis*.py</code>, <code>held_out_evaluation*.py</code>, <code>diagnose_phase4b.py</code>, <code>pilot_analysis.py</code>) were deliberately <b>not</b> re-run: they read ground truth and overwrite the frozen configurations and result files.</li>
+<li><b>Offline operation</b> of the dashboard (network disabled) and <b>cross-browser or real-device</b> behaviour were not tested.</li>
+<li>A <b>clean clone</b> of a committed revision has not been tested; the tests above ran in the development working tree, which at the time also held uncommitted guided-explanation changes.</li>
+</ul></div>
+
+<!-- ======================= 12 RESULTS ======================= -->
+<h1 id="s12">12. Experimental Results and Analysis</h1>
+<p>All figures are quoted verbatim from <code>evaluate/held_out_results.json</code> (Phase 4) and <code>evaluate/held_out_results_4b.json</code> (Phase 4b); the report build asserts them. The evaluation sets contain 12 trials each: 8 fault trials and 4 clean controls. <b>Every rate below rests on a very small sample and should be read as rough.</b></p>
+<div class="box bad"><div class="bt">Headline findings, stated plainly</div>
+<ul>
+<li><b>Phase 4 failed its false-attribution target: 3/12 = 25%, against a target of at most 10%.</b> This is the only independent held-out result.</li>
+<li>Phase 4b's <b>1/12 = 8.3%</b> was measured on the <b>same held-out set after its traces had been inspected</b> during design. It is a historical record and <b>not</b> independent validation.</li>
+<li>Loss and bandwidth faults were <b>not localized</b>: 0 of 4 on the exposed held-out set and 0 of 4 on the Phase 4b tuning set.</li>
+</ul></div>
+
+<h2 id="s12a">12.1 Phase 4: detector <code>mad</code> on the held-out set (independent)</h2>
+<p>The Phase 4 configuration (<code>mad</code>, <code>k_mad = 5.0</code>, Δ = 1.5 s) was frozen from the tuning set and scored once on the 12 held-out trials <b>before any retuning</b>.</p>
+<div class="tcap"><b>Table 12.1</b> Phase 4 summary (<code>held_out_results.json</code>)</div>
+<table>
+<tr><th>Metric</th><th class="num">Result</th><th class="num">Wilson 95% interval</th><th>Reading</th></tr>
+<tr><td><b>False attribution</b> (target ≤ 10%)</td><td class="num bad">3/12 = 25.0%</td><td class="num">8.9% – 53.2%</td><td class="bad">Target missed. Two confident claims on clean controls, one wrong confident claim.</td></tr>
+<tr><td>Clean-control false positives</td><td class="num bad">2/4 = 50%</td><td class="num">15.0% – 85.0%</td><td>Two of four clean controls received a high-confidence claim.</td></tr>
+<tr><td>Exact first hop (localized trials)</td><td class="num">2/3 = 66.7%</td><td class="num">20.8% – 93.9%</td><td>Only three fault trials produced a claim.</td></tr>
+<tr><td>Within ±1 hop (localized trials)</td><td class="num">3/3 = 100%</td><td class="num">43.8% – 100%</td><td>Denominator is only the trials that were localized.</td></tr>
+<tr><td>Recall of injected faults</td><td class="num warn">3/8 = 37.5%</td><td class="num">n/a</td><td>Five of eight faults produced no claim.</td></tr>
+<tr><td>Precision of claims</td><td class="num">3/5 = 60%</td><td class="num">n/a</td><td></td></tr>
+<tr><td>Brier score of confidence</td><td class="num">0.432 (n = 5)</td><td class="num">n/a</td><td>Poor; the four <i>high</i>-confidence claims were 50% accurate.</td></tr>
+</table>
+<h2 id="s12b">12.2 Phase 4b: detector <code>mad_sustained</code> on the same set (exposed)</h2>
+<div class="box warn"><div class="bt">Why this is not independent validation</div>
+<p><code>evaluate/diagnose_phase4b.py</code> loaded nine of the held-out traces together with their ground-truth labels and was written <b>before</b> the Phase 4b detector variants existed; the revised configuration was then scored on that very set. The design therefore saw the data it was later scored on. The evidence ledger marks <code>p4-held-*</code> permanently <b>EXPOSED</b>: it may be used for historical analysis and transparent reporting, but never to claim independent validation of a revised algorithm. The <code>gate_check.overall_pass = true</code> field in the result file is a computed comparison against thresholds, not a validation.</p></div>
+<div class="tcap"><b>Table 12.2</b> Phase 4b summary (<code>held_out_results_4b.json</code>, exposed set)</div>
+<table>
+<tr><th>Metric</th><th class="num">Result</th><th class="num">Wilson 95% interval</th><th>Reading</th></tr>
+<tr><td>False attribution (target ≤ 10%)</td><td class="num warn">1/12 = 8.3%</td><td class="num">1.5% – 35.4%</td><td>Numeric threshold met on <b>exposed</b> data. The one false attribution is <code>p4-held-12</code>.</td></tr>
+<tr><td>Clean-control false positives</td><td class="num">0/4 = 0%</td><td class="num">0% – 49.0%</td><td>The sustained-run rule removed the Phase 4 clean-control false positives.</td></tr>
+<tr><td>Exact first hop (localized trials)</td><td class="num">3/4 = 75%</td><td class="num">30.1% – 95.4%</td><td></td></tr>
+<tr><td>Within ±1 hop (localized trials)</td><td class="num">4/4 = 100%</td><td class="num">51.0% – 100%</td><td>Four localized trials.</td></tr>
+<tr><td>Recall of injected faults</td><td class="num warn">4/8 = 50%</td><td class="num">n/a</td><td>Four of eight faults still produced no claim (all four loss and bandwidth trials).</td></tr>
+<tr><td>Brier score of confidence</td><td class="num">0.040 (n = 4)</td><td class="num">n/a</td><td>From four claims on an inspected set; not evidence of calibration.</td></tr>
+</table>
+<figure class="narrow"><img src="../figures/fig_phase4_vs_4b.png" alt="Phase 4 versus Phase 4b false attribution and clean-control false positives"><figcaption><b>Figure 12.</b> False attribution and clean-control false positives. The hatched Phase 4b bars come from an <b>exposed</b> set and must not be read as independent confirmation.</figcaption></figure>
+<h2 id="s12c">12.3 Per-trial outcomes on the held-out set</h2>
+<p>"Expected hop" is the first hop the injected fault could affect (<code>min(hop_target + 1, 5)</code>). A <b>FA</b> mark means the claim was scored a false attribution. These labels already appear in the repository's result files.</p>
+<div class="tcap"><b>Table 12.3</b> Held-out trials: Phase 4 (<code>mad</code>) against Phase 4b (<code>mad_sustained</code>); reported hop range with confidence level</div>
+<table>
+<tr><th style="width:28%">Trial</th><th>Class</th><th class="num">Expected hop</th><th>Phase 4 (independent)</th><th>Phase 4b (exposed)</th></tr>
+<tr><td><code>01-clean1</code></td><td>clean control</td><td class="num">none</td><td class="bad">Hops 1-5, high <b>FA</b></td><td>no claim</td></tr>
+<tr><td><code>02-clean2</code></td><td>clean control</td><td class="num">none</td><td>no claim</td><td>no claim</td></tr>
+<tr><td><code>03-clean3</code></td><td>clean control</td><td class="num">none</td><td class="bad">Hops 1-5, high <b>FA</b></td><td>no claim</td></tr>
+<tr><td><code>04-latency-hop2-moderate</code></td><td>latency</td><td class="num">3</td><td class="ok">3-5, high ✓</td><td class="ok">3-5, high ✓</td></tr>
+<tr><td><code>05-jitter-hop3-mild</code></td><td>jitter</td><td class="num">4</td><td class="ok">4-5, high ✓</td><td class="ok">4-5, high ✓</td></tr>
+<tr><td><code>06-loss-hop4-severe</code></td><td>loss</td><td class="num">5</td><td class="warn">no claim (miss)</td><td class="warn">no claim (miss)</td></tr>
+<tr><td><code>07-bandwidth-hop1-moderate</code></td><td>bandwidth</td><td class="num">2</td><td class="warn">no claim (miss)</td><td class="warn">no claim (miss)</td></tr>
+<tr><td><code>08-jitter-hop2-transient</code></td><td>jitter</td><td class="num">3</td><td class="warn">no claim (miss)</td><td class="ok">3-5, high ✓</td></tr>
+<tr><td><code>09-bandwidth-hop3-transient</code></td><td>bandwidth</td><td class="num">4</td><td class="warn">no claim (miss)</td><td class="warn">no claim (miss)</td></tr>
+<tr><td><code>10-loss-hop1-mild</code></td><td>loss</td><td class="num">2</td><td class="warn">no claim (miss)</td><td class="warn">no claim (miss)</td></tr>
+<tr><td><code>11-unknown-hop1</code></td><td>clean control, Hop 1 silent</td><td class="num">none</td><td>no claim</td><td>no claim</td></tr>
+<tr><td><code>12-unknown-plus-impair</code></td><td>jitter, Hops 1-2 silent</td><td class="num">2</td><td class="bad">3-5, medium <b>FA</b></td><td class="bad">3-5, medium <b>FA</b></td></tr>
+</table>
+<h2 id="s12d">12.4 Analysis</h2>
+<ul>
+<li><b>What changed between Phase 4 and 4b</b> (on the exposed set): the two clean-control false positives disappeared and one jitter trial (<code>08</code>) became localized. Nothing changed for loss or bandwidth, and <code>p4-held-12</code> remained a false attribution. The improvement is consistent with the diagnosed mechanism (single noisy buckets crossing a near-zero absolute threshold), but it cannot be separated from the fact that the design saw these traces.</li>
+<li><b>Latency and jitter</b> were localized when a claim was made (latency 1 of 1; jitter 3 of 3 under Phase 4b, one of them a false attribution). <b>Loss and bandwidth</b> were localized in 0 of 4 held-out trials (by both detectors) and 0 of 4 Phase 4b tuning trials (by all four candidates). A possible reason, that bucketed RTT may be the wrong observable for these faults, is recorded in the project as an open problem, not as a finding.</li>
+<li><b>The false attribution in <code>p4-held-12</code></b> occurred where the first affected hop (Hop 2) was itself unknown; the detector reported the next hop. The system correctly lowered confidence to <i>medium</i> and shows Hops 1 and 2 as unknown, but under the project's own definition (a confident claim that is wrong) it is a false attribution.</li>
+<li><b>Small samples.</b> With 12 trials, one trial moves a rate by 8.3 percentage points; "within ±1 hop 4/4" has a 95% interval of 51% to 100%; four clean controls cannot distinguish 0% from nearly 50% false positives. The specification's 120-trial tuning set and 288-cell evaluation matrix were not run.</li>
+</ul>
+<h2 id="s12e">12.5 The recorded demo run (not an evaluation)</h2>
+<p><code>demo-run-01</code> is a recorded real run: a 90 ms latency impairment on the link leaving Hop 2, injected 25 s into a 35 s capture. The frozen <code>mad_sustained</code> pipeline reported <i>"Degradation appears to begin at or after Hop 3"</i>, high confidence (score 1.0), corroborating Hops 3, 4 and 5, with the application and Hop 3 onsets both at +25.0 s (Figure 4, Figure 7). From the recorded files: Hop 3 probes averaged <b>78.53 ms</b> over the last third of the faulted capture and <b>0.012 ms</b> in a fresh 10-round probe after the fault was cleared (<code>recovery_hop.jsonl</code>). The scenario was chosen in the detector's favourable regime (fault covering a minority of the window) and illustrates the pipeline; it is <b>not</b> evidence about detector accuracy.</p>

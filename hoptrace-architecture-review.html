@@ -1,0 +1,796 @@
+<title>Hoptrace Architecture Review</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap');
+
+  :root{
+    --bg:#f5f6f8;
+    --surface:#ffffff;
+    --surface-2:#edf0f4;
+    --surface-3:#e2e7ed;
+    --border:#d8dee6;
+    --text:#17202b;
+    --text-muted:#5a6472;
+    --text-faint:#8892a0;
+    --accent:#205fa6;
+    --accent-soft:#e7eefb;
+    --accent-ink:#14406f;
+    --warn:#a6641b;
+    --warn-soft:#fbeee0;
+    --danger:#a6362a;
+    --danger-soft:#f7e6e3;
+    --good:#227050;
+    --good-soft:#e2f3ea;
+    --font-display:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-body:'Source Serif 4', Georgia, 'Iowan Old Style', serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e131c;
+      --surface:#151c28;
+      --surface-2:#1b2432;
+      --surface-3:#232f40;
+      --border:#2b3646;
+      --text:#e7ecf3;
+      --text-muted:#9aa7b8;
+      --text-faint:#6d7889;
+      --accent:#75aae9;
+      --accent-soft:#1c2f4a;
+      --accent-ink:#cfe1f8;
+      --warn:#dba766;
+      --warn-soft:#38291a;
+      --danger:#e08e81;
+      --danger-soft:#3a221f;
+      --good:#7bcaa3;
+      --good-soft:#173a29;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e131c;
+    --surface:#151c28;
+    --surface-2:#1b2432;
+    --surface-3:#232f40;
+    --border:#2b3646;
+    --text:#e7ecf3;
+    --text-muted:#9aa7b8;
+    --text-faint:#6d7889;
+    --accent:#75aae9;
+    --accent-soft:#1c2f4a;
+    --accent-ink:#cfe1f8;
+    --warn:#dba766;
+    --warn-soft:#38291a;
+    --danger:#e08e81;
+    --danger-soft:#3a221f;
+    --good:#7bcaa3;
+    --good-soft:#173a29;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.65;
+    padding-inline:20px;
+  }
+  h1,h2,h3,h4{font-family:var(--font-display); text-wrap:balance; color:var(--text); font-weight:600;}
+  a{color:var(--accent);}
+  code, .mono{font-family:var(--font-mono);}
+
+  .shell{
+    max-width:1180px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:250px minmax(0,1fr);
+    gap:48px;
+    padding-block:36px 80px;
+  }
+  @media (max-width:960px){
+    .shell{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead{grid-column:1/-1; margin-bottom:8px;}
+  .eyebrow{
+    font-family:var(--font-mono); font-size:.75rem; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--text-faint); display:flex; align-items:center; gap:10px; margin-bottom:10px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .masthead h1{font-size:clamp(1.9rem,4vw,2.7rem); line-height:1.08; margin:0 0 10px;}
+  .masthead .sub{color:var(--text-muted); font-size:1.05rem; max-width:62ch; margin:0 0 20px;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  .verdict-chip{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:var(--font-mono); font-size:.78rem; letter-spacing:.06em; text-transform:uppercase;
+    padding:7px 14px; border-radius:3px; border:1px solid var(--warn); color:var(--warn); background:var(--warn-soft);
+  }
+  .verdict-chip .sw{width:8px;height:8px;border-radius:50%;background:var(--warn);}
+  .meta-tag{
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.04em; color:var(--text-faint);
+    border:1px solid var(--border); padding:6px 10px; border-radius:3px; background:var(--surface);
+  }
+  hr.rule{border:none; border-top:1px solid var(--border); margin:28px 0 0;}
+
+  /* ---------- Sidebar / TOC ---------- */
+  nav.toc{position:sticky; top:24px; align-self:start; max-height:calc(100vh - 48px); overflow-y:auto;}
+  nav.toc .toc-title{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:12px;}
+  nav.toc ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--border);}
+  nav.toc a{
+    display:block; text-decoration:none; color:var(--text-muted); font-size:.86rem;
+    padding:5px 0 5px 14px; border-left:2px solid transparent; margin-left:-1px;
+  }
+  nav.toc a:hover{color:var(--text); border-left-color:var(--accent-soft);}
+  nav.toc .toc-num{font-family:var(--font-mono); color:var(--text-faint); font-size:.75rem; margin-right:6px;}
+  nav.toc .toc-final a{color:var(--accent); font-weight:600;}
+
+  details.mobile-toc{display:none;}
+  @media (max-width:960px){
+    nav.toc{display:none;}
+    details.mobile-toc{
+      display:block; border:1px solid var(--border); border-radius:6px; background:var(--surface);
+      padding:10px 14px; margin-bottom:8px;
+    }
+    details.mobile-toc summary{font-family:var(--font-mono); font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; color:var(--text-muted);}
+    details.mobile-toc ol{list-style:none; margin:10px 0 0; padding:0; columns:2; gap:0 20px;}
+    details.mobile-toc a{display:block; font-size:.85rem; padding:4px 0; color:var(--text-muted); text-decoration:none;}
+  }
+
+  /* ---------- Main content ---------- */
+  main{min-width:0;}
+  section{padding-block:34px; border-bottom:1px solid var(--border); scroll-margin-top:20px;}
+  section:last-of-type{border-bottom:none;}
+  .hop{
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.1em; color:var(--accent);
+    display:flex; align-items:center; gap:8px; margin-bottom:10px;
+  }
+  .hop::before{content:''; width:16px; height:1px; background:var(--accent);}
+  section h2{font-size:1.5rem; margin:0 0 16px;}
+  section h3{font-size:1.12rem; margin:26px 0 10px; color:var(--text);}
+  section p{margin:0 0 14px; max-width:70ch;}
+  section ul, section ol{margin:0 0 14px; padding-left:22px; max-width:70ch;}
+  section li{margin-bottom:6px;}
+  strong{color:var(--text); font-weight:600;}
+  .lede{font-size:1.12rem; color:var(--text); max-width:66ch;}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    border:1px solid var(--border); border-left:3px solid var(--accent); background:var(--surface);
+    border-radius:4px; padding:16px 18px; margin:18px 0; max-width:70ch;
+  }
+  .callout.good{border-left-color:var(--good);}
+  .callout.bad{border-left-color:var(--danger);}
+  .callout-label{font-family:var(--font-mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:6px;}
+  .callout.good .callout-label{color:var(--good);}
+  .callout.bad .callout-label{color:var(--danger);}
+  .callout p{margin:0; font-size:.98rem;}
+
+  /* ---------- Evidence tags ---------- */
+  .tag{
+    display:inline-flex; align-items:center; gap:.4em; padding:.2em .65em; border-radius:3px;
+    font-family:var(--font-mono); font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;
+  }
+  .tag--fact{background:var(--accent); color:var(--surface); border:1px solid var(--accent);}
+  .tag--inference{background:transparent; border:1.5px solid var(--accent); color:var(--accent);}
+  .tag--correlation{background:transparent; border:1.5px dashed var(--text-muted); color:var(--text-muted);}
+  .tag--confidence{background:var(--surface-2); border:1px solid var(--border); color:var(--text);}
+  .tag--unknown{border:1px dashed var(--text-faint); color:var(--text-faint);
+    background:repeating-linear-gradient(45deg, transparent, transparent 4px, var(--surface-2) 4px, var(--surface-2) 8px);}
+
+  .tag-legend{display:flex; flex-wrap:wrap; gap:10px 18px; margin:18px 0 22px;}
+  .tag-legend-item{display:flex; align-items:center; gap:8px; font-size:.86rem; color:var(--text-muted);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto; margin:16px 0 20px; max-width:100%;}
+  table{border-collapse:collapse; width:100%; font-size:.92rem; min-width:560px;}
+  th, td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); font-weight:500;}
+  tbody tr:hover{background:var(--surface-2);}
+  td.num, th.num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+
+  /* ---------- Diagram card ---------- */
+  .diagram-card{border:1px solid var(--border); border-radius:6px; background:var(--surface); padding:18px; margin:18px 0 22px;}
+  .diagram-card svg{width:100%; height:auto; display:block;}
+  .diagram-caption{font-family:var(--font-mono); font-size:.72rem; color:var(--text-faint); margin-top:10px; letter-spacing:.02em;}
+
+  /* ---------- Roadmap ---------- */
+  .phase{display:grid; grid-template-columns:64px 1fr; gap:16px; margin-bottom:18px; max-width:74ch;}
+  .phase-num{font-family:var(--font-mono); color:var(--accent); font-size:.85rem; padding-top:2px;}
+  .phase h4{margin:0 0 4px; font-size:1rem; font-family:var(--font-display); color:var(--text);}
+  .phase p{margin:0; font-size:.92rem; color:var(--text-muted);}
+
+  /* ---------- Final verdict block ---------- */
+  .verdict-block{
+    margin-top:8px; border-radius:8px; padding:32px 30px; background:var(--warn-soft); border:1px solid var(--warn);
+  }
+  .verdict-block .vb-label{font-family:var(--font-mono); font-size:.78rem; letter-spacing:.12em; text-transform:uppercase; color:var(--warn); margin-bottom:10px;}
+  .verdict-block h2{margin:0 0 14px; color:var(--text); font-size:1.7rem;}
+  .verdict-block p{max-width:72ch; color:var(--text);}
+  .verdict-block ol{max-width:72ch;}
+
+  footer.doc-footer{grid-column:1/-1; margin-top:8px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  footer.doc-footer span{font-family:var(--font-mono); font-size:.75rem; color:var(--text-faint);}
+
+  ::selection{background:var(--accent-soft); color:var(--accent-ink);}
+</style>
+
+<div class="shell">
+  <div class="masthead">
+    <div class="eyebrow"><span class="dot"></span> Computer Networks &middot; Architecture Review &middot; Pre-Implementation</div>
+    <h1>HOPTRACE — Network Path Fault Localization through Application-to-Hop Correlation</h1>
+    <p class="sub">An independent technical review of the HOPTRACE concept: what's genuinely novel, what already exists, where the idea breaks, and the architecture I'd actually build.</p>
+    <div class="meta-row">
+      <span class="verdict-chip"><span class="sw"></span> Verdict: Yellow</span>
+      <span class="meta-tag">23 sections</span>
+      <span class="meta-tag">no code written</span>
+      <span class="meta-tag">reviewed 2026-09-16</span>
+    </div>
+  </div>
+
+  <details class="mobile-toc">
+    <summary>Contents</summary>
+    <ol>
+      <li><a href="#s01">01 Executive Summary</a></li>
+      <li><a href="#s02">02 Problem Validation</a></li>
+      <li><a href="#s03">03 Competitive Landscape</a></li>
+      <li><a href="#s04">04 What's Novel</a></li>
+      <li><a href="#s05">05 Refined Problem Statement</a></li>
+      <li><a href="#s06">06 Refined Objectives</a></li>
+      <li><a href="#s07">07 System Architecture</a></li>
+      <li><a href="#s08">08 Component Design</a></li>
+      <li><a href="#s09">09 Application Telemetry</a></li>
+      <li><a href="#s10">10 Path Measurement</a></li>
+      <li><a href="#s11">11 Correlation Approach</a></li>
+      <li><a href="#s12">12 Evidence &amp; Confidence</a></li>
+      <li><a href="#s13">13 Controlled Testbed</a></li>
+      <li><a href="#s14">14 Ground-Truth Experiments</a></li>
+      <li><a href="#s15">15 Evaluation Metrics</a></li>
+      <li><a href="#s16">16 Failure Cases</a></li>
+      <li><a href="#s17">17 Demo Plan</a></li>
+      <li><a href="#s18">18 Security &amp; Ethics</a></li>
+      <li><a href="#s19">19 Technology Stack</a></li>
+      <li><a href="#s20">20 What I'd Change</a></li>
+      <li><a href="#s21">21 Final Architecture</a></li>
+      <li><a href="#s22">22 Roadmap</a></li>
+      <li><a href="#s23">23 Biggest Risks</a></li>
+      <li><a href="#s24">24 Out of Scope</a></li>
+      <li><a href="#verdict">Final Decision</a></li>
+    </ol>
+  </details>
+
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#s01"><span class="toc-num">01</span>Executive Summary</a></li>
+      <li><a href="#s02"><span class="toc-num">02</span>Problem Validation</a></li>
+      <li><a href="#s03"><span class="toc-num">03</span>Competitive Landscape</a></li>
+      <li><a href="#s04"><span class="toc-num">04</span>What's Novel</a></li>
+      <li><a href="#s05"><span class="toc-num">05</span>Refined Problem</a></li>
+      <li><a href="#s06"><span class="toc-num">06</span>Refined Objectives</a></li>
+      <li><a href="#s07"><span class="toc-num">07</span>System Architecture</a></li>
+      <li><a href="#s08"><span class="toc-num">08</span>Component Design</a></li>
+      <li><a href="#s09"><span class="toc-num">09</span>App Telemetry</a></li>
+      <li><a href="#s10"><span class="toc-num">10</span>Path Measurement</a></li>
+      <li><a href="#s11"><span class="toc-num">11</span>Correlation Approach</a></li>
+      <li><a href="#s12"><span class="toc-num">12</span>Evidence &amp; Confidence</a></li>
+      <li><a href="#s13"><span class="toc-num">13</span>Controlled Testbed</a></li>
+      <li><a href="#s14"><span class="toc-num">14</span>Ground-Truth Exp.</a></li>
+      <li><a href="#s15"><span class="toc-num">15</span>Eval Metrics</a></li>
+      <li><a href="#s16"><span class="toc-num">16</span>Failure Cases</a></li>
+      <li><a href="#s17"><span class="toc-num">17</span>Demo Plan</a></li>
+      <li><a href="#s18"><span class="toc-num">18</span>Security &amp; Ethics</a></li>
+      <li><a href="#s19"><span class="toc-num">19</span>Tech Stack</a></li>
+      <li><a href="#s20"><span class="toc-num">20</span>What I'd Change</a></li>
+      <li><a href="#s21"><span class="toc-num">21</span>Final Architecture</a></li>
+      <li><a href="#s22"><span class="toc-num">22</span>Roadmap</a></li>
+      <li><a href="#s23"><span class="toc-num">23</span>Biggest Risks</a></li>
+      <li><a href="#s24"><span class="toc-num">24</span>Out of Scope</a></li>
+      <li class="toc-final"><a href="#verdict">Final Decision →</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="s01">
+      <div class="hop">HOP 01</div>
+      <h2>Executive Summary</h2>
+      <p class="lede">HOPTRACE's core instinct — correlate an application symptom with per-hop network telemetry, and say <em>where</em> degradation begins rather than <em>what</em> caused it — is sound and academically defensible. Nothing about it needs to be abandoned. But as scoped, it borrows the shape of a monitoring dashboard (ThousandEyes, PingPlotter) when its actual contribution should be a <strong>correlation algorithm with a rigorous, evaluated confidence model</strong>, tested against known ground truth. The dashboard is a delivery mechanism for that algorithm, not the project.</p>
+      <p>Three changes turn this from "a nicer traceroute UI" into a real systems contribution:</p>
+      <ol>
+        <li>Make the <strong>controlled testbed the primary evaluation vehicle</strong>, not a demo prop — the live internet has no ground truth, so claims about accuracy can only be made inside the testbed.</li>
+        <li>Replace ad-hoc thresholding ("hop &gt; 80ms = bad") with a <strong>changepoint-detection-based correlation engine</strong> borrowed from the network-tomography and time-series literature, because that's what makes the confidence numbers meaningful instead of decorative.</li>
+        <li><strong>Co-locate the application client and the path prober on the same host.</strong> This single design choice removes the hardest infrastructure problem in the whole project — cross-host clock synchronization — for free.</li>
+      </ol>
+      <p>With those changes, this is a strong, demonstrable, viva-defensible Computer Networks project. Without them, it's a well-built dashboard that happens to display two charts next to each other and asks the viewer to eyeball the correlation — which is exactly what MTR + ThousandEyes already let you do manually.</p>
+    </section>
+
+    <section id="s02">
+      <div class="hop">HOP 02</div>
+      <h2>Problem Validation</h2>
+      <p><strong>Is the problem well-defined?</strong> Partially, and the imprecision matters. "Where does degradation begin" is answerable only if you first fix <em>what you're measuring degradation of</em>. There are two different questions hiding in the one sentence:</p>
+      <ul>
+        <li><strong>Path-probe framing:</strong> where does a synthetic probe (ICMP/UDP/TCP with incrementing TTL) start showing elevated RTT? This is well-defined and directly measurable.</li>
+        <li><strong>Application-forwarding framing:</strong> where does the actual application traffic start being delayed? This is <em>not</em> directly measurable — you cannot get a router to timestamp your WebSocket packets as they pass through. You can only infer it from the probe framing and hope the two are close enough.</li>
+      </ul>
+      <p>HOPTRACE has to be explicit, everywhere in its output, that it answers the first question and treats the second as an inference resting on an assumption: that synthetic probes and application packets experience comparable per-hop treatment. That assumption is reasonable but not guaranteed — see <a href="#s02-honesty">below</a> and <a href="#s16">Failure Cases</a>.</p>
+      <h3 id="s02-honesty">Is application-to-hop correlation actually feasible?</h3>
+      <p>At the level the brief wants — <em>temporal</em> correlation between an app-level onset and a path-level onset, localized to a hop range with a stated confidence — yes, feasible, and this is essentially what production systems like Microsoft's Pingmesh and Meta's NetNORAD do at data-center scale for their own operators. At the level of definitively attributing causation to a specific router — no, and no existing tool claims to do that either, for reasons rooted in traceroute's own physics (rate-limited ICMP generation, path asymmetry, and hops that deprioritize diagnostic traffic relative to forwarded traffic all mean a slow hop reply is not proof of a slow forwarding path). This is precisely the distinction the brief itself insists on (OBSERVED FACT vs. INFERENCE vs. CORRELATION), so the project is validating its own founding constraint correctly — the risk is only in the implementation drifting away from it under demo pressure.</p>
+      <div class="callout">
+        <div class="callout-label">Grounding claim</div>
+        <p>The academic literature that treats this rigorously is <strong>network tomography</strong> — specifically <em>Boolean network tomography</em>, which formalizes exactly this problem (inferring internal link/node failures from end-to-end path measurements) and proves hard <strong>identifiability limits</strong>: some sets of failure locations are mathematically indistinguishable given the available vantage points and paths. A single client tracing a single path toward a single server — which is what HOPTRACE's live demo does — is close to the weakest possible vantage-point configuration in this literature. That's not a flaw to hide; it's the reason the system must report ranges and confidence instead of single points, and it gives the project a real citation trail instead of reinventing the idea from scratch.</p>
+      </div>
+    </section>
+
+    <section id="s03">
+      <div class="hop">HOP 03</div>
+      <h2>Existing Solutions / Competitive Landscape</h2>
+      <p>None of the following tools do what HOPTRACE proposes to do — but each does a piece of it better than a first pass at HOPTRACE would, and the review has to be honest about that before claiming novelty.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tool</th><th>What it does well</th><th>What it does not do</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>traceroute</strong></td>
+              <td>Baseline hop discovery via TTL expiry; universally available.</td>
+              <td>Single-shot, no persistence, no app correlation, no statistics.</td>
+            </tr>
+            <tr>
+              <td><strong>MTR / WinMTR</strong></td>
+              <td>Continuous per-hop RTT + loss sampling in real time; the standard "is it my ISP" tool.</td>
+              <td>Pure network layer. No application signal, no ground truth, no confidence — the human reads the table and decides.</td>
+            </tr>
+            <tr>
+              <td><strong>PingPlotter</strong></td>
+              <td>Time-series graphing of per-hop latency/loss, alerting, historical replay.</td>
+              <td>Same gap as MTR: no application-layer integration, no automated localization.</td>
+            </tr>
+            <tr>
+              <td><strong>ThousandEyes</strong></td>
+              <td>The closest existing analog. Runs genuine <em>Path Visualization</em> (multi-round traceroute-style probing, ECMP fan-out shown as branching paths) <em>alongside</em> separate application/HTTP-layer tests, from many vantage points, with 16+ metadata categories per hop.</td>
+              <td>The correlation between the app-layer chart and the path chart is left to the human analyst reading two dashboards side by side. Public documentation shows no automated "app onset ≈ hop N onset, confidence X" output — that step is exactly the gap HOPTRACE can fill, if it fills it rigorously rather than cosmetically.</td>
+            </tr>
+            <tr>
+              <td><strong>Pingmesh (Microsoft) / NetNORAD (Meta)</strong></td>
+              <td>Continuous all-pairs active probing at data-center scale with statistical baselining, detecting silent packet drops and faults in production fabrics within seconds.</td>
+              <td>Operate where the operator owns both endpoints <em>and</em> every hop in between — a fundamentally easier inference problem than an uncontrolled Internet path. Good precedent for the probing pattern, not a substitute for the localization problem HOPTRACE targets.</td>
+            </tr>
+            <tr>
+              <td><strong>Network tomography (academic)</strong></td>
+              <td>Rigorous math for inferring internal link/node state from end-to-end measurements, with formal identifiability bounds.</td>
+              <td>Largely theoretical / simulation-evaluated; rarely paired with a real application-layer symptom or a reproducible physical testbed with injected ground truth.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The honest summary: MTR gives you the per-hop data, ThousandEyes gives you the per-hop data <em>and</em> the app data side by side, and academic tomography gives you the statistical rigor for turning ambiguous end-to-end measurements into localization claims with stated confidence. No one publicly documented system combines all three with a ground-truth-evaluated algorithm. That combination is where HOPTRACE should live.</p>
+    </section>
+
+    <section id="s04">
+      <div class="hop">HOP 04</div>
+      <h2>What Is Actually Novel About HOPTRACE</h2>
+      <p>Reframed honestly, the contribution is <strong>not</strong> a new measurement technique (traceroute is 35+ years old) and <strong>not</strong> a new statistical technique (changepoint detection and Boolean tomography both predate this project by decades). The legitimate, defensible contribution for a strong undergraduate/graduate Computer Networks project is:</p>
+      <ol>
+        <li>A <strong>system</strong> that synchronizes application-level and path-level probing on a single clock and treats their temporal alignment as the primary signal, rather than treating each stream as an independently-read chart.</li>
+        <li>An <strong>algorithm</strong> that turns that alignment into a hop-range estimate using changepoint detection and downstream-persistence logic (see <a href="#s11">§11</a>), instead of a fixed latency threshold.</li>
+        <li>An explicit, enforced <strong>evidence taxonomy</strong> (fact / inference / correlation / confidence / unknown) that governs every output string the system produces — turning "technical honesty" from a writing-style rule into a structural constraint on the software.</li>
+        <li>A <strong>ground-truth evaluation</strong>: dozens of controlled trials with a known fault location, type, and magnitude, scoring the algorithm's localization accuracy, false-attribution rate, and confidence calibration — the part no consumer tool publishes, because they don't need to; a course project does.</li>
+      </ol>
+      <p>That's a legitimate, citable, demonstrable contribution. It is a contribution about <em>evaluated correlation under uncertainty</em>, not about network measurement itself — which is exactly the framing that survives a skeptical viva panel asking "isn't this just MTR with extra steps?"</p>
+    </section>
+
+    <section id="s05">
+      <div class="hop">HOP 05</div>
+      <h2>Refined Problem Statement</h2>
+      <div class="callout good">
+        <div class="callout-label">Working statement</div>
+        <p>Given synchronized time series of <strong>(a)</strong> application-level performance events from a controlled real-time client/server application, and <strong>(b)</strong> repeated per-hop path measurements (RTT, loss) collected along the same route from the same vantage point, design and evaluate an algorithm that estimates the network segment at which performance degradation first becomes observable in the measured data — together with a calibrated confidence label — and validate that estimate against known fault locations injected in a controlled, multi-hop Linux testbed.</p>
+      </div>
+      <p>Compared to the original framing ("where along the path does degradation begin"), this version fixes three ambiguities: it names the two data sources explicitly, it commits to "observable in the measured data" rather than "in reality" (the honesty distinction from §2), and it makes the ground-truth testbed part of the problem statement itself rather than an optional add-on — because without it, "estimate" has no way to be shown correct or wrong.</p>
+    </section>
+
+    <section id="s06">
+      <div class="hop">HOP 06</div>
+      <h2>Refined Project Objectives</h2>
+      <ul>
+        <li><strong>O1 — Instrumented testbed.</strong> Build a reproducible multi-hop Linux path (namespaces + veth + tc/netem) with a fault-injection controller that logs ground truth independently of anything HOPTRACE measures.</li>
+        <li><strong>O2 — Synthetic application with real symptoms.</strong> Build a small WebSocket client/server that produces a genuine, measurable, timestamped performance signal under load — not a proxy for "fun," a proxy for "latency-sensitive interaction."</li>
+        <li><strong>O3 — Path measurement engine.</strong> Continuous, flow-consistent, multi-probe-per-hop measurement that survives ECMP and rate-limited ICMP well enough to be usable, and says "unknown" when it can't.</li>
+        <li><strong>O4 — Correlation / localization engine.</strong> Changepoint-based onset detection on every series, downstream-persistence scoring, and a hop-range output with confidence — this is the thesis of the project.</li>
+        <li><strong>O5 — Evidence-constrained reporting.</strong> Every user-facing statement is generated from the fact/inference/correlation/confidence/unknown taxonomy; no string in the UI is allowed to assert unmeasured causation.</li>
+        <li><strong>O6 — Ground-truth evaluation.</strong> A repeatable experiment harness producing accuracy, precision/recall, false-attribution rate, detection latency, and confidence-calibration numbers across a fault-injection matrix.</li>
+        <li><strong>O7 — Demonstration.</strong> A 5–10 minute live run showing detection, localization, and recovery against a fault the audience can see being injected in real time.</li>
+      </ul>
+      <p>Objectives are ordered by dependency, not by drama — O4 is the intellectual center of the project, but O1–O3 have to exist first because O4 has nothing to run on otherwise, and O6 is what separates this from a demo.</p>
+    </section>
+
+    <section id="s07">
+      <div class="hop">HOP 07</div>
+      <h2>Proposed System Architecture — Critique of the Original</h2>
+      <p>The original diagram (UI → Analysis API → {Path Measurement Engine, Application Telemetry} → Fault Localization Engine → Evidence) is the right shape at a coarse level, but it's missing two components that the rest of this review depends on, and it under-specifies the one component that matters most:</p>
+      <ul>
+        <li><strong>Missing: a Ground-Truth / Fault-Injection Controller.</strong> Without it as a first-class component, "evaluation" has nothing to compare against — it can't be bolted on later, because ground-truth logging has to be independent of (and never visible to) the localization engine, or the evaluation is circular.</li>
+        <li><strong>Missing: an explicit Time-Sync boundary.</strong> The diagram implicitly assumes application timestamps and hop timestamps land on a shared timeline. They don't, unless the architecture forces it — see <a href="#s09">§9</a> for the fix (co-location, not NTP).</li>
+        <li><strong>Under-specified: the Fault Localization Engine is drawn as one box.</strong> It is actually at least three distinct stages — per-series changepoint detection, cross-series alignment, and evidence classification — and treating it as one undifferentiated box is exactly how a project ends up with an "if latency &gt; threshold" one-liner standing in for the actual contribution.</li>
+      </ul>
+      <p>The refined, final version of this diagram is in <a href="#s21">§21</a>; §8–§12 justify each piece of it individually.</p>
+    </section>
+
+    <section id="s08">
+      <div class="hop">HOP 08</div>
+      <h2>Component-by-Component Design</h2>
+      <h3>Application Client + Path Prober (co-located)</h3>
+      <p>Runs on the vantage-point host. Owns one wall clock. Emits two synchronized time series against that single clock: application RTT events and per-hop probe RTT/loss events. See <a href="#s09">§9</a> and <a href="#s10">§10</a>.</p>
+      <h3>Fault Injection / Ground-Truth Controller</h3>
+      <p>Runs against the testbed only (never against the live-internet demo path, where ground truth is unknowable). Applies and removes <code>tc netem</code> impairments on a named interface at a scheduled time, and writes an immutable ground-truth log: <code>{hop, impairment_type, magnitude, t_start, t_end}</code>. This log is consumed only by the evaluation harness (§15), never by the localization engine — the engine must not see the answer key.</p>
+      <h3>Correlation / Localization Engine</h3>
+      <p>Three internal stages, each independently testable: (1) per-series onset detection, (2) cross-series alignment and downstream-persistence scoring, (3) evidence classification into the fact/inference/correlation/confidence/unknown taxonomy. Detailed in §11–§12.</p>
+      <h3>Analysis API + Store</h3>
+      <p>A thin API over a time-series buffer (in-memory ring buffer is sufficient for a course project — no need for a real TSDB). Serves the UI and the evaluation harness identically, so the demo and the experiments are provably running the same code path.</p>
+      <h3>UI</h3>
+      <p>Path visualization, application-lag chart, and an "evidence panel" that renders using the tag taxonomy from §12 — not free-text sentences generated ad hoc, but strings assembled from typed evidence objects, so the UI is structurally incapable of asserting something the engine didn't classify as fact.</p>
+    </section>
+
+    <section id="s09">
+      <div class="hop">HOP 09</div>
+      <h2>Application Telemetry Design</h2>
+      <p>The brief's WebSocket instinct is right; two refinements make it load-bearing rather than decorative.</p>
+      <h3>What it should contain</h3>
+      <ul>
+        <li>Fixed-cadence timestamped ping/ack messages (10–20&nbsp;Hz) carrying a monotonic sequence number and client send-time.</li>
+        <li>Server echoes the sequence number and its own receive time immediately — the metric that matters is <strong>client-measured round-trip time</strong>, computed entirely from the client's own clock.</li>
+        <li>A simple simulated interaction layer on top (e.g. a client-driven "input" event the server must acknowledge within a target budget) gives a second, more app-shaped signal beyond raw RTT, without depending on any proprietary game.</li>
+      </ul>
+      <div class="callout good">
+        <div class="callout-label">Key design decision</div>
+        <p><strong>Measure RTT, not one-way delay, and compute it on a single clock.</strong> One-way application latency requires the client and server clocks to be synchronized to within a few milliseconds — NTP alone often isn't good enough over consumer links, and getting this wrong silently corrupts every downstream correlation. RTT sidesteps the problem entirely: it's <code>t_receive − t_send</code>, both timestamps taken by the same clock. This is exactly why traceroute and ping use RTT too — it's not a simplification, it's the standard way to avoid needing synchronized clocks across hosts.</p>
+      </div>
+      <h3>Where it runs, and why that decision matters more than the protocol</h3>
+      <p>Run the WebSocket client <em>and</em> the path prober (§10) as two processes on the <strong>same physical host</strong>, sharing one clock. This means the "temporal correlation" step in §11 never has to reconcile two different machines' notions of time — the hardest, most failure-prone piece of a naive design (cross-host NTP/PTP sync) is eliminated by an architecture choice rather than solved by more code. This is the single highest-leverage change from the original brief.</p>
+    </section>
+
+    <section id="s10">
+      <div class="hop">HOP 10</div>
+      <h2>Network Path Measurement Design</h2>
+      <ul>
+        <li><strong>Probe protocol:</strong> UDP or TCP SYN probes with incrementing TTL, not plain ICMP echo. Routers frequently rate-limit and deprioritize ICMP relative to forwarded traffic; a UDP/TCP probe sharing the application's transport family is a closer (still imperfect) proxy for how the application's own packets are treated.</li>
+        <li><strong>Flow consistency (paris-traceroute style):</strong> keep the 5-tuple used for hashing constant across an entire probing round. Without this, per-flow ECMP load balancing makes "hop 3" mean a different physical router on every probe, silently corrupting hop identity.</li>
+        <li><strong>Repeated probing per hop, not single-shot:</strong> each hop needs multiple samples per round to distinguish a transient spike from a persistent shift — this is what feeds the changepoint detector in §11 instead of a single noisy point.</li>
+        <li><strong>Hop persistence tracking:</strong> record whether the responding IP at a given TTL is stable across rounds; flag instability rather than silently trusting whichever address answered most recently.</li>
+        <li><strong>Non-responding hops:</strong> tag as <code>UNKNOWN</code>, not interpolated or skipped. A silent hop is a real, common outcome (ICMP rate-limiting, firewalled routers) and the localization engine must treat it as missing data, not as "zero latency."</li>
+      </ul>
+    </section>
+
+    <section id="s11">
+      <div class="hop">HOP 11</div>
+      <h2>Fault Localization / Correlation Approach</h2>
+      <p>This is the actual thesis of the project. The algorithm has three stages:</p>
+      <ol>
+        <li><strong>Per-series onset detection.</strong> Run a changepoint detector (a simple CUSUM or a Bayesian online changepoint model — either is a defensible, well-cited choice) independently on the application RTT series and on each hop's RTT/loss series, producing an onset time (or "no changepoint found") per series.</li>
+        <li><strong>Downstream-persistence alignment.</strong> Find the shallowest hop <em>i</em> whose onset time falls within a small window of the application's onset time <strong>and</strong> where every hop from <em>i</em> through the server also shows a concurrent onset, while hops upstream of <em>i</em> do not. This persistence pattern is what separates "the degradation starts here and continues" from "hop 3 just had a noisy blip" — a single hop spiking in isolation, with no downstream continuation, is explicitly evidence <em>against</em> localizing there.</li>
+        <li><strong>Evidence classification.</strong> The output of stage 2 is passed through the taxonomy in §12 before it ever reaches a UI string.</li>
+      </ol>
+      <div class="diagram-card">
+        <svg viewBox="0 0 920 300" xmlns="http://www.w3.org/2000/svg">
+          <style>
+            .grid-line{stroke:var(--border); stroke-width:1;}
+            .axis-text{fill:var(--text-faint); font-family:'IBM Plex Mono', monospace; font-size:11px;}
+            .series-label{fill:var(--text-muted); font-family:'IBM Plex Mono', monospace; font-size:11.5px;}
+            .app-line{stroke:var(--accent); stroke-width:2.5; fill:none;}
+            .hop-ok{stroke:var(--good); stroke-width:2; fill:none;}
+            .hop-bad{stroke:var(--warn); stroke-width:2; fill:none;}
+            .onset-line{stroke:var(--danger); stroke-width:1.5; stroke-dasharray:4 3;}
+            .onset-text{fill:var(--danger); font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.02em;}
+            .panel-bg{fill:var(--surface-2);}
+          </style>
+          <rect class="panel-bg" x="0" y="0" width="920" height="300" rx="4"/>
+          <text class="axis-text" x="16" y="24">application RTT</text>
+          <path class="app-line" d="M20,55 L220,55 L260,52 L300,80 L340,105 L400,110 L560,110 L700,108 L880,109"/>
+          <text class="axis-text" x="16" y="94">hop 2 RTT</text>
+          <path class="hop-ok" d="M20,120 L560,120 L600,118 L880,119"/>
+          <text class="axis-text" x="16" y="154">hop 3 RTT</text>
+          <path class="hop-bad" d="M20,180 L260,180 L300,205 L340,225 L400,228 L880,227"/>
+          <text class="axis-text" x="16" y="234">hop 4 (server-side) RTT</text>
+          <path class="hop-bad" d="M20,240 L260,240 L300,262 L340,278 L400,281 L880,280"/>
+          <line class="onset-line" x1="300" y1="30" x2="300" y2="290"/>
+          <text class="onset-text" x="308" y="42">onsets align at t≈300 → hop 3</text>
+          <line class="grid-line" x1="20" y1="292" x2="900" y2="292"/>
+          <text class="axis-text" x="20" y="300" dy="8">t (probe rounds) →</text>
+        </svg>
+        <div class="diagram-caption">Fig. 1 — Onset alignment: hop 2 shows no changepoint; hops 3 and 4 shift concurrently with the application series. The algorithm reports "degradation first appears at hop 3, persists downstream" — not "hop 3 caused it."</div>
+      </div>
+    </section>
+
+    <section id="s12">
+      <div class="hop">HOP 12</div>
+      <h2>Evidence + Confidence Model</h2>
+      <p>This is the mechanism that enforces the brief's "technical honesty" requirement as software behavior, not prose style. Every claim the system emits carries one of five tags:</p>
+      <div class="tag-legend">
+        <div class="tag-legend-item"><span class="tag tag--fact">Fact</span> directly measured — a raw RTT/loss sample.</div>
+        <div class="tag-legend-item"><span class="tag tag--inference">Inference</span> derived via a stated model — e.g. a changepoint location.</div>
+        <div class="tag-legend-item"><span class="tag tag--correlation">Correlation</span> temporal association only — no causal claim.</div>
+        <div class="tag-legend-item"><span class="tag tag--confidence">Confidence</span> a calibrated score attached to an inference.</div>
+        <div class="tag-legend-item"><span class="tag tag--unknown">Unknown</span> insufficient evidence — reported explicitly, not guessed.</div>
+      </div>
+      <p>Confidence is computed from named, inspectable factors — not a black-box score:</p>
+      <ul>
+        <li>statistical strength of the changepoint (effect size relative to baseline noise);</li>
+        <li>number of downstream hops corroborating the onset;</li>
+        <li>hop-identity stability across the trial (a flapping ECMP path lowers confidence);</li>
+        <li>completeness of response data (more <code>UNKNOWN</code> hops lowers confidence);</li>
+        <li>consistency across repeated trials, where repetition is available.</li>
+      </ul>
+      <div class="callout good">
+        <div class="callout-label">Acceptable output</div>
+        <p><span class="tag tag--correlation">Correlation</span> Application degradation is temporally correlated with a path-level change. <span class="tag tag--inference">Inference</span> Evidence is consistent with degradation first appearing at or after Hop 3. <span class="tag tag--confidence">Confidence: high</span> (4/4 downstream hops corroborate, stable hop identity, 0 unknown hops).</p>
+      </div>
+      <div class="callout bad">
+        <div class="callout-label">Never acceptable</div>
+        <p>"Hop 3 is causing the lag." "Your ISP router is broken." Any string that omits the tag it belongs to, or that a UI component can render without one.</p>
+      </div>
+    </section>
+
+    <section id="s13">
+      <div class="hop">HOP 13</div>
+      <h2>Controlled Testbed Design</h2>
+      <p>Linear topology, 4–5 hops, built from Linux network namespaces and veth pairs, each "router" namespace doing real IP forwarding with static routes — not Docker's own bridge networking, which fights a custom topology instead of exposing one (see §19).</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Node</th><th>Role</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ns-client</td><td>App client + path prober</td><td>Single clock owner (§9)</td></tr>
+            <tr><td class="mono">ns-r1 … ns-r3</td><td>Forwarding routers</td><td><code>ip_forward=1</code>, static routes, <code>tc netem</code> attachment point per hop</td></tr>
+            <tr><td class="mono">ns-server</td><td>App server + probe responder</td><td>Ground truth never visible here either</td></tr>
+            <tr><td class="mono">fault-controller</td><td>Injects/removes netem qdiscs on schedule</td><td>Writes ground-truth log; not readable by the engine</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Impairment types to support: added latency, jitter (normal-distribution delay variance), packet loss (including Gilbert-Elliott bursty loss, more realistic than uniform loss), and bandwidth capping — all via <code>tc qdisc … netem</code> on the specific veth interface representing the target hop. A stretch (not core-scope) extension is a small ECMP mesh to test hop-identity stability under load balancing; keep it out of the primary evaluation topology (§24).</p>
+    </section>
+
+    <section id="s14">
+      <div class="hop">HOP 14</div>
+      <h2>Ground-Truth Experiments</h2>
+      <p>A factorial trial matrix, each cell run multiple times for statistical power:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Factor</th><th>Levels</th></tr></thead>
+          <tbody>
+            <tr><td>Fault location</td><td class="num">hop 1, 2, 3, (server-adjacent)</td></tr>
+            <tr><td>Fault type</td><td>latency, jitter, loss, bandwidth cap</td></tr>
+            <tr><td>Magnitude</td><td>mild / moderate / severe, relative to baseline noise floor</td></tr>
+            <tr><td>Duration</td><td>transient (few seconds) vs. sustained</td></tr>
+            <tr><td>Probe conditions</td><td>normal, one non-responding hop, simulated ICMP rate-limit</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Each trial logs: ground-truth hop/type/magnitude/window (from the controller, §8), HOPTRACE's reported hop range and confidence, and detection latency (elapsed time from actual injection to reported detection). Multi-fault trials are a reasonable stretch goal once the single-fault matrix is solid — not before.</p>
+    </section>
+
+    <section id="s15">
+      <div class="hop">HOP 15</div>
+      <h2>Evaluation Metrics</h2>
+      <ul>
+        <li><strong>Localization accuracy:</strong> exact-hop match rate, and within-±1-hop match rate (the tomography identifiability limits in §2 predict exact-hop accuracy will be lower than within-1-hop — report both, and explain the gap rather than hide it).</li>
+        <li><strong>Precision / recall</strong> on the binary "degradation detected at all" classification per trial.</li>
+        <li><strong>False attribution rate:</strong> trials where the system reports high confidence at the <em>wrong</em> hop — this is the single most important number for the honesty claim, and it should be reported even if it's not flattering.</li>
+        <li><strong>Detection latency:</strong> time from injection to report.</li>
+        <li><strong>Confidence calibration:</strong> a reliability diagram — do "high confidence" trials actually land correct more often than "low confidence" ones? A system whose confidence score doesn't correlate with correctness is worse than useless, because it's actively misleading.</li>
+        <li><strong>Robustness sweeps:</strong> accuracy as a function of injected probe loss, jitter, and fraction of non-responding hops.</li>
+      </ul>
+    </section>
+
+    <section id="s16">
+      <div class="hop">HOP 16</div>
+      <h2>Failure Cases and Limitations</h2>
+      <ul>
+        <li><strong>ECMP hash flapping mid-trial</strong> changes which physical router answers at a given TTL, corrupting hop-identity continuity. Mitigation: hop-persistence tracking (§10) plus confidence penalty; cannot be fully solved on a real multipath internet path.</li>
+        <li><strong>Reverse-path-only impairment.</strong> ICMP TTL-exceeded replies travel back over whatever the return path is, which may differ from the forward path. An impairment only on the return leg can make degradation look like it starts near the client, not near the true forward-path hop — a fundamental traceroute limitation, not a bug in this project. Worth demonstrating deliberately as a known limitation rather than discovering it live.</li>
+        <li><strong>Probe deprioritization without application impact.</strong> A router that rate-limits diagnostic traffic under load can produce a "slow hop" that forwarded application packets never actually experience — the false-positive case the brief explicitly warns about. TCP/UDP probes (§10) and downstream-persistence scoring (§11) reduce but do not eliminate this; it must remain a stated limitation, not a solved problem.</li>
+        <li><strong>Non-responding hop directly at the fault.</strong> If the impaired router itself drops or rate-limits probes, its own data point may be <code>UNKNOWN</code> exactly where the answer is needed most — the algorithm should localize to the surrounding known hops with reduced confidence rather than guess.</li>
+        <li><strong>Overfitting to the clean testbed.</strong> A namespace/veth topology has none of the real internet's queueing diversity, hidden middleboxes, or genuine ECMP entropy. Report testbed accuracy as testbed accuracy — never claim it generalizes to arbitrary internet paths without separately qualified evidence.</li>
+      </ul>
+    </section>
+
+    <section id="s17">
+      <div class="hop">HOP 17</div>
+      <h2>Live Demonstration Plan</h2>
+      <div class="phase"><div class="phase-num">0–1 min</div><div><h4>Healthy baseline</h4><p>Show the path visualization (4 hops, all green) and the application lag chart flat and low. State what "normal" looks like numerically.</p></div></div>
+      <div class="phase"><div class="phase-num">1–2 min</div><div><h4>Inject a known fault</h4><p>From the fault-injection controller, add +100&nbsp;ms latency at hop 3, visible to the audience as a terminal command with a timestamp — this is the ground truth, shown openly, not hidden.</p></div></div>
+      <div class="phase"><div class="phase-num">2–4 min</div><div><h4>Observe both signals move</h4><p>Application lag chart shows the onset; per-hop chart shows hops 3–4 shifting while hops 1–2 stay flat. Narrate what's <em>observed</em> before the system says anything.</p></div></div>
+      <div class="phase"><div class="phase-num">4–5 min</div><div><h4>HOPTRACE reports</h4><p>The evidence panel renders: correlation detected, inference "at or after hop 3", confidence and the factors behind it — using the exact tag vocabulary from §12.</p></div></div>
+      <div class="phase"><div class="phase-num">5–7 min</div><div><h4>A harder case</h4><p>Inject a milder, jitter-only fault, or one on a non-responding hop, and show the confidence score drop and an honest "insufficient evidence" output — this is more convincing than another clean success, because it shows the confidence model is real.</p></div></div>
+      <div class="phase"><div class="phase-num">7–9 min</div><div><h4>Remove the fault, show recovery</h4><p>Both series return to baseline; the evidence panel updates to reflect recovery.</p></div></div>
+      <div class="phase"><div class="phase-num">9–10 min</div><div><h4>One evaluation slide</h4><p>Localization accuracy, false-attribution rate, and the calibration diagram from the full trial matrix — the demo shows one trial live, this slide proves the algorithm was tested on dozens.</p></div></div>
+    </section>
+
+    <section id="s18">
+      <div class="hop">HOP 18</div>
+      <h2>Security / Ethics</h2>
+      <ul>
+        <li><strong>Scope of probing:</strong> active probing (traceroute-style TTL probes, repeated at a controlled cadence) must be restricted to the testbed and, for the live-internet demo mode, to destinations the operator is authorized to probe against — the user's own infrastructure, or well-known public measurement targets that explicitly permit it. Never probe arbitrary third-party hosts at the cadence this system uses; that reads as reconnaissance or a low-grade denial-of-service pattern even when unintentional.</li>
+        <li><strong>Permissions required:</strong> raw-socket / traceroute-style probing typically needs elevated privileges (CAP_NET_RAW or root) on Linux — document this requirement plainly and run with the minimum privilege that works, not as root by default.</li>
+        <li><strong>Privacy:</strong> resolved hop IPs can reveal ISP infrastructure and rough geolocation; don't persist or publish raw path data beyond what's needed for the evaluation write-up, and avoid logging the identities of any real third-party networks touched during a live-internet demo.</li>
+        <li><strong>Safe testing boundary:</strong> the fault-injection controller must only ever be capable of touching interfaces inside the testbed's own namespaces — it should be architecturally incapable of reaching a real production interface, not merely instructed not to.</li>
+        <li><strong>Responsible framing:</strong> the evidence taxonomy in §12 is also an ethics control — a tool that could plausibly be read as accusing a specific ISP or router of a fault carries real reputational stakes if it's wrong, which is one more reason the fact/inference/correlation split isn't optional polish.</li>
+      </ul>
+    </section>
+
+    <section id="s19">
+      <div class="hop">HOP 19</div>
+      <h2>Technology Stack Options</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Layer</th><th>Recommended</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Testbed substrate</td><td>Raw <code>ip netns</code> + <code>veth</code> + <code>tc/netem</code>, scripted</td><td>Docker's own bridge/NAT networking actively fights a hand-built multi-hop topology; raw namespaces give full control and are the actual "networks" content of the project.</td></tr>
+            <tr><td>Dev/testbed environment</td><td>WSL2 (Windows host) or a small Linux VM/cloud instance</td><td><code>tc netem</code> and multi-namespace forwarding need a real Linux kernel — this project cannot be built directly on Windows; flag this early as an environment decision, not a late blocker.</td></tr>
+            <tr><td>Path prober</td><td>Python (<code>scapy</code>/<code>asyncio</code>) or Go</td><td>Either is fine; Go gives cleaner concurrency for continuous multi-hop probing if the language is already familiar.</td></tr>
+            <tr><td>Application client/server</td><td>Node.js or Python, plain WebSocket</td><td>No framework needed for a fixed-cadence ping/ack protocol.</td></tr>
+            <tr><td>Correlation engine</td><td>Python (numpy/pandas + a small changepoint library, or a hand-rolled CUSUM)</td><td>Changepoint detection is well-served by existing libraries; hand-rolling CUSUM is also reasonable and easier to explain in a viva than an imported black box.</td></tr>
+            <tr><td>Analysis API</td><td>FastAPI or a minimal Node server</td><td>Thin layer; no need for a production framework.</td></tr>
+            <tr><td>UI</td><td>React or plain HTML/JS + a lightweight charting approach</td><td>Match to existing familiarity; the UI is not the contribution.</td></tr>
+            <tr><td>Storage</td><td>In-memory ring buffer, optionally SQLite for trial logs</td><td>No real TSDB needed at this scale.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="s20">
+      <div class="hop">HOP 20</div>
+      <h2>What I Would Change From the Original Idea</h2>
+      <ol>
+        <li><strong>Co-locate the application client and path prober on one host</strong> to make temporal correlation a single-clock problem, not a cross-host sync problem.</li>
+        <li><strong>Make the controlled testbed the primary evaluation vehicle</strong> and demote the live-internet path to a qualitative, heavily-caveated demo mode — accuracy claims can only be made where ground truth exists.</li>
+        <li><strong>Replace threshold-based fault detection with changepoint detection + downstream-persistence scoring</strong>, grounded in the time-series and Boolean-tomography literature, so confidence numbers mean something.</li>
+        <li><strong>Elevate the fault-injection/ground-truth controller to a first-class architecture component</strong> from day one, not something added before the evaluation chapter is due.</li>
+        <li><strong>Use UDP/TCP probes instead of plain ICMP</strong> to reduce (not eliminate) the probe-deprioritization false-positive risk.</li>
+        <li><strong>Structurally enforce the evidence taxonomy</strong> — typed evidence objects the UI renders from, not free-text templates a developer might loosen under demo pressure.</li>
+        <li><strong>Explicitly scope out multi-fault and ECMP-mesh scenarios for v1</strong> — they're real and interesting but would dilute a single-semester project's ability to finish the ground-truth evaluation properly.</li>
+        <li><strong>Plan the Linux environment (WSL2/VM) up front</strong>, since the working environment here is Windows and the testbed's core tools (network namespaces, <code>tc</code>) require a real Linux kernel.</li>
+      </ol>
+    </section>
+
+    <section id="s21">
+      <div class="hop">HOP 21</div>
+      <h2>Final Recommended Architecture</h2>
+      <div class="diagram-card">
+        <svg viewBox="0 0 940 560" xmlns="http://www.w3.org/2000/svg">
+          <style>
+            .box{fill:var(--surface); stroke:var(--border); stroke-width:1.2;}
+            .box-accent{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.2;}
+            .box-warn{fill:var(--warn-soft); stroke:var(--warn); stroke-width:1.2;}
+            .lbl{fill:var(--text); font-family:'IBM Plex Sans', sans-serif; font-size:13px; font-weight:600;}
+            .sub{fill:var(--text-muted); font-family:'IBM Plex Mono', monospace; font-size:10.5px;}
+            .arrow{stroke:var(--text-faint); stroke-width:1.4; fill:none; marker-end:url(#arrowhead);}
+            .arrow-dash{stroke:var(--danger); stroke-width:1.2; fill:none; stroke-dasharray:4 3; marker-end:url(#arrowhead-d);}
+            .groupline{fill:none; stroke:var(--border); stroke-width:1; stroke-dasharray:2 3;}
+            .grouplbl{fill:var(--text-faint); font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.06em;}
+          </style>
+          <defs>
+            <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--text-faint)"/></marker>
+            <marker id="arrowhead-d" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--danger)"/></marker>
+          </defs>
+
+          <rect x="20" y="20" width="900" height="90" rx="5" class="box-accent"/>
+          <text class="lbl" x="40" y="48">HOPTRACE UI</text>
+          <text class="sub" x="40" y="68">path visualization · app-lag chart · evidence panel (fact / inference / correlation / confidence / unknown)</text>
+          <text class="sub" x="40" y="86">renders only from typed evidence objects — no free-text causal strings</text>
+
+          <line class="arrow" x1="470" y1="110" x2="470" y2="140"/>
+          <rect x="320" y="140" width="300" height="46" rx="5" class="box"/>
+          <text class="lbl" x="340" y="168">Analysis API + time-series store</text>
+
+          <line class="arrow" x1="470" y1="186" x2="470" y2="212"/>
+
+          <rect x="20" y="212" width="900" height="150" rx="5" class="box-warn"/>
+          <text class="grouplbl" x="36" y="230">CORRELATION / LOCALIZATION ENGINE — the thesis</text>
+          <rect x="40" y="242" width="260" height="100" rx="4" class="box"/>
+          <text class="lbl" x="55" y="266">1. Onset detection</text>
+          <text class="sub" x="55" y="284">changepoint detector</text>
+          <text class="sub" x="55" y="299">per series (app + each hop)</text>
+          <text class="sub" x="55" y="322">→ onset time or "none"</text>
+
+          <line class="arrow" x1="300" y1="292" x2="340" y2="292"/>
+          <rect x="340" y="242" width="260" height="100" rx="4" class="box"/>
+          <text class="lbl" x="355" y="266">2. Downstream-persistence</text>
+          <text class="sub" x="355" y="284">alignment + shallowest hop</text>
+          <text class="sub" x="355" y="299">whose onset ≈ app onset and</text>
+          <text class="sub" x="355" y="314">persists to server</text>
+
+          <line class="arrow" x1="600" y1="292" x2="640" y2="292"/>
+          <rect x="640" y="242" width="260" height="100" rx="4" class="box"/>
+          <text class="lbl" x="655" y="266">3. Evidence classification</text>
+          <text class="sub" x="655" y="284">tags output as fact / inference /</text>
+          <text class="sub" x="655" y="299">correlation / confidence / unknown</text>
+          <text class="sub" x="655" y="314">confidence from named factors (§12)</text>
+
+          <line class="arrow" x1="150" y1="212" x2="150" y2="186"/>
+          <line class="arrow" x1="790" y1="212" x2="790" y2="186"/>
+
+          <rect x="20" y="386" width="430" height="90" rx="5" class="box"/>
+          <text class="lbl" x="40" y="412">App client + Path prober</text>
+          <text class="sub" x="40" y="430">co-located, ONE clock — sidesteps cross-host sync</text>
+          <text class="sub" x="40" y="446">WebSocket RTT ping/ack · flow-consistent TTL probes</text>
+          <line class="arrow" x1="150" y1="386" x2="150" y2="186" transform="translate(0,0)"/>
+
+          <rect x="490" y="386" width="430" height="90" rx="5" class="box"/>
+          <text class="lbl" x="510" y="412">Testbed + Fault-Injection Controller</text>
+          <text class="sub" x="510" y="430">netns / veth / tc netem, 4–5 hop linear path</text>
+          <text class="sub" x="510" y="446">writes ground truth — never read by the engine</text>
+
+          <rect x="20" y="500" width="900" height="46" rx="5" class="box"/>
+          <text class="lbl" x="40" y="528">Evaluation Harness</text>
+          <text class="sub" x="230" y="528">reads engine output + ground-truth log independently → accuracy, false-attribution rate, calibration (§15)</text>
+
+          <line class="arrow-dash" x1="705" y1="476" x2="705" y2="500"/>
+          <line class="arrow-dash" x1="470" y1="362" x2="470" y2="500" transform="translate(255,0)"/>
+        </svg>
+        <div class="diagram-caption">Fig. 2 — Final architecture. Solid arrows: live data path. Dashed red: ground-truth path, kept structurally separate from the engine so evaluation cannot be circular.</div>
+      </div>
+    </section>
+
+    <section id="s22">
+      <div class="hop">HOP 22</div>
+      <h2>Phase-by-Phase Implementation Roadmap</h2>
+      <div class="phase"><div class="phase-num">Phase 0</div><div><h4>Environment + testbed skeleton</h4><p>WSL2/VM set up; namespaces, veth chain, and static routing for a 4–5 hop linear path; verify end-to-end connectivity and a manual <code>tc netem</code> impairment before writing any measurement code.</p></div></div>
+      <div class="phase"><div class="phase-num">Phase 1</div><div><h4>Path measurement engine</h4><p>Flow-consistent TTL probing, per-hop repeated sampling, hop-persistence tracking, UNKNOWN handling. Validate against the testbed's known topology.</p></div></div>
+      <div class="phase"><div class="phase-num">Phase 2</div><div><h4>Application telemetry</h4><p>WebSocket client/server, RTT ping/ack at fixed cadence, co-located with the prober on one clock.</p></div></div>
+      <div class="phase"><div class="phase-num">Phase 3</div><div><h4>Fault-injection controller</h4><p>Scriptable, timestamped impairment injection with an independent ground-truth log.</p></div></div>
+      <div class="phase"><div class="phase-num">Phase 4</div><div><h4>Correlation engine v1</h4><p>Changepoint detection + downstream-persistence logic; validate manually against a handful of known trials before automating evaluation.</p></div></div>
+      <div class="phase"><div class="phase-num">Phase 5</div><div><h4>Evaluation harness</h4><p>Run the full fault matrix (§14), compute the metrics (§15). This phase is what makes the project defensible — do not compress it to make room for UI polish.</p></div></div>
+      <div class="phase"><div class="phase-num">Phase 6</div><div><h4>UI + demo polish</h4><p>Evidence-panel rendering from typed objects, path visualization, rehearsed demo script (§17).</p></div></div>
+      <div class="phase"><div class="phase-num">Phase 7 (stretch)</div><div><h4>Robustness extensions</h4><p>ECMP mesh, asymmetric-path handling, multi-fault trials — only after Phase 5's numbers exist.</p></div></div>
+    </section>
+
+    <section id="s23">
+      <div class="hop">HOP 23</div>
+      <h2>Biggest Technical Risks</h2>
+      <ul>
+        <li><strong>Building the testbed on Windows without planning for it.</strong> Namespaces and <code>tc</code> need a real Linux kernel; discover this in Phase 0, not Phase 4.</li>
+        <li><strong>Clock-sync mistakes</strong> if the co-location decision (§9) is skipped or half-implemented — this single issue can quietly invalidate every correlation result without triggering an obvious error.</li>
+        <li><strong>ICMP/probe deprioritization producing a confident false attribution</strong> that no amount of engineering fully removes — the mitigation is the confidence model and honest reporting, not a claim of having solved it.</li>
+        <li><strong>Scope creep toward "a ThousandEyes clone"</strong> — more dashboard features instead of a better-evaluated algorithm is the most likely way this project drifts off its own thesis.</li>
+        <li><strong>Overfitting the algorithm to the clean testbed</strong> and presenting testbed numbers as if they generalized to arbitrary internet paths.</li>
+        <li><strong>Compressing Phase 5 (evaluation)</strong> under deadline pressure — this is the phase most likely to be cut, and it's the one the whole review argues is the actual contribution.</li>
+      </ul>
+    </section>
+
+    <section id="s24">
+      <div class="hop">HOP 24</div>
+      <h2>What Must Not Be Built / Out of Scope</h2>
+      <ul>
+        <li>A general-purpose network monitoring dashboard (a Grafana/PingPlotter clone) — the UI exists to present the correlation result, not to compete on charting features.</li>
+        <li>Integration with proprietary game telemetry (Valorant, Fortnite, etc.) — already correctly excluded in the brief; keep it excluded.</li>
+        <li>Multi-tenant / SaaS infrastructure, accounts, or a production deployment.</li>
+        <li>BGP-level route analysis or AS-path attribution — a different, much larger problem than hop-level temporal correlation.</li>
+        <li>Active probing of arbitrary third-party internet hosts at monitoring cadence — an authorization and ethics problem (§18), not just a scope one.</li>
+        <li>"AI root-cause" framing or any ML black box whose output isn't traceable back to the fact/inference/correlation/confidence taxonomy.</li>
+        <li>Multi-fault simultaneous localization and full ECMP-mesh robustness — real and interesting, correctly deferred to Phase 7 stretch goals, not core deliverables.</li>
+        <li>Mobile clients or non-web UI surfaces.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <div id="verdict" class="verdict-block" style="grid-column:1/-1;">
+    <div class="vb-label">Final Decision</div>
+    <h2>YELLOW — strong concept, specific changes required before implementation</h2>
+    <p>The core idea — temporally correlating an application symptom with per-hop path telemetry to localize (not attribute) where degradation begins, under an explicit evidence/confidence taxonomy, evaluated against known ground truth — is technically sound, has real academic grounding (Boolean network tomography, changepoint detection literature), and fills a genuine gap left open by MTR, PingPlotter, and even ThousandEyes, all of which stop short of an automated, evaluated correlation step. It is not novel as a measurement technique; it is potentially novel as an evaluated system.</p>
+    <p>Before writing implementation code, make these changes explicit and locked in:</p>
+    <ol>
+      <li>Co-locate the application client and path prober on one host, on one clock (§9, §20.1).</li>
+      <li>Commit to the controlled testbed as the primary evaluation vehicle; treat the live-internet path as a qualitative demo only (§20.2).</li>
+      <li>Replace any threshold-based detection with changepoint detection + downstream-persistence scoring (§11, §20.3).</li>
+      <li>Build the fault-injection/ground-truth controller as a first-class component from the start, structurally isolated from the localization engine (§8, §21).</li>
+      <li>Enforce the fact/inference/correlation/confidence/unknown taxonomy as typed data the UI renders from — not a style guideline for prose (§12, §20.6).</li>
+      <li>Plan the Linux testbed environment (WSL2 or a VM) before Phase 1, given the current working environment is Windows (§19, §23).</li>
+      <li>Explicitly cut multi-fault and ECMP-mesh scenarios from v1 scope (§20.7, §24).</li>
+    </ol>
+    <p>With those seven changes in place, this is a technically deep, experimentally defensible, viva-ready Computer Networks project — and one whose central claim can actually be measured, not just demonstrated.</p>
+  </div>
+
+  <footer class="doc-footer">
+    <span>HOPTRACE architecture review — pre-implementation phase, no code written</span>
+    <span>Prepared for HOPTRACE project submission</span>
+  </footer>
+</div>

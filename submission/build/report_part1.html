@@ -1,0 +1,145 @@
+<!-- ======================= COVER ======================= -->
+<section class="cover">
+  <span class="tag">BCSE308P · Computer Networks Lab · Innovative Evaluation Practices</span>
+  <h1 class="title">HOPTRACE</h1>
+  <div class="subtitle">Network Path Fault Localization through Application-to-Hop Correlation</div>
+  <div class="dots"><i style="background:#2fd3e0"></i><i style="background:#ff6b4a"></i><i style="background:#ffd23f"></i><i style="background:#b4ff3d"></i><i style="background:#6a4dff"></i></div>
+  <div class="card">
+    <table>
+      <tr><td>DELIVERABLE</td><td><b>Assignment 8: Project Report</b> (PDF)</td></tr>
+      <tr><td>STUDENT / AUTHOR</td><td><b>Krish Chirag Shah</b> (sole author)</td></tr>
+      <tr><td>REGISTRATION NO.</td><td><b>24BCE0624</b></td></tr>
+      <tr><td>COURSE</td><td>BCSE308P: Computer Networks Lab</td></tr>
+      <tr><td>SLOT</td><td>{{SLOT_HTML}}</td></tr>
+      <tr><td>TEAM NUMBER</td><td>{{TEAM_HTML}}</td></tr>
+      <tr><td>SUBMISSION</td><td>VTOP · Assignments 8, 9 and 10 (report, presentation, GitHub repository)</td></tr>
+      <tr><td>DATE</td><td>27 October 2026</td></tr>
+      <tr><td>SOURCE CODE</td><td>GitHub repository <b>{{SLOT}}_Team{{TEAM}}</b>: <a class="mono" href="https://github.com/KrishUsesGit/F2_Team24">https://github.com/KrishUsesGit/F2_Team24</a></td></tr>
+    </table>
+  </div>
+  <div class="banner"><b>Research prototype.</b> HOPTRACE estimates where application degradation <i>appears to begin</i> along an observed path. It does not establish which device caused it. The current detector has <b>not</b> been independently validated; the one independent evaluation (Phase 4) <b>missed</b> its false-attribution target (3/12 = 25% against at most 10%).</div>
+  <div class="foot">Report built from the project repository; every number is read from files in <code style="background:none">evaluate/</code> and <code style="background:none">experiments/</code>.</div>
+</section>
+
+<!-- ======================= TOC ======================= -->
+<section class="toc">
+  <h1 class="nobreak">Contents</h1>
+  {{TOC}}
+</section>
+
+<!-- ======================= ABSTRACT ======================= -->
+<h1 id="abs">Abstract</h1>
+<p>When a networked application slows down, the application can observe <i>that</i> it is slow but not <i>where</i> on the network path the slowdown starts. Conventional tools split the problem in two: <code>ping</code> and <code>traceroute</code> measure the path without knowing what the application experienced, while application monitoring measures the application without knowing the path. HOPTRACE joins the two views. It probes every hop of a path and samples the application's own round-trip time (RTT) on <b>one shared clock</b>, detects when each series starts to behave abnormally, and reports the earliest hop whose onset lines up in time with the application's. Its output is deliberately bounded: <i>"Degradation appears to begin at or after Hop N."</i> It never says that a particular router caused anything.</p>
+<p>The system is implemented end to end on a controlled testbed of six Linux network namespaces (a client, four routers and a server). It consists of a raw-socket path prober, a hand-written RFC 6455 WebSocket application client and server, a fault controller that injects <code>tc netem</code>/<code>tbf</code> impairments with ground truth isolated by operating-system permissions, a correlation engine (median/MAD onset detection, timing alignment, typed evidence), an interpretation layer, and a React + TypeScript dashboard that displays stored results. All Python code uses only the standard library.</p>
+<p>Evaluation was honest about failure. In Phase 4, the only independent held-out run, the selected detector (<code>mad</code>) <b>missed the false-attribution target: 3/12 = 25% against at most 10%</b>. A revised detector (<code>mad_sustained</code>, Phase 4b) scored 1/12 = 8.3%, but on the <b>same held-out set after its traces had been inspected</b>, so that figure is a historical record and <b>not</b> independent validation. Loss and bandwidth faults were not localized (0 of 4 on the exposed held-out set and 0 of 4 on the Phase 4b tuning set). Confidence is a fixed heuristic, not a probability.</p>
+
+<div class="box note"><div class="bt">Report at a glance: what was verified when this report was produced (27 October 2026)</div>
+<ul>
+<li><b>117 Python unit tests</b> pass (WSL2 Ubuntu 24.04, Python 3.12.3) and the repository hygiene check passes.</li>
+<li><b>310 frontend tests</b> in 14 files pass; TypeScript strict typecheck, ESLint with zero warnings, production build and the distribution-safety check pass; 40 real-browser layout checks and a four-trial browser session pass (Windows 11, Node 24.14.1).</li>
+<li>The <b>six-namespace testbed</b> was built, verified (200/200 packets, 0% loss; five hops in order, twice) and torn down in WSL2.</li>
+<li><b>Not re-run now:</b> the full live demo (it overwrites a recorded trial), the historical evaluation scripts (they overwrite result files), an offline test of the dashboard, and a clean-clone test. Section 11 lists these explicitly.</li>
+</ul></div>
+
+<!-- ======================= 1 ======================= -->
+<h1 id="s1">1. Introduction and Problem Statement</h1>
+<p>A user reports that an application feels slow. The operator can look at the application's response times, and can run <code>traceroute</code> to list the routers along the way. What neither tool answers is the question that matters during diagnosis: <b>at which point along the path did the application's degradation begin to appear?</b></p>
+<p>Answering this requires the application's behaviour and the path's behaviour to be compared <i>in time</i>. If the application's RTT jumps at 25.0 s and the probe RTT to Hop 3 jumps at 25.0 s while Hops 1 and 2 stay flat, the evidence points at the segment between Hop 2 and Hop 3. If the two series use unsynchronised clocks, or if the probes are sent from a different place from where the application runs, that comparison is unreliable.</p>
+<p><b>Problem statement.</b> Given an application whose round-trip time degrades while a path of known hops is observed, estimate the earliest hop at which the degradation appears to begin, state the evidence and its limits, and refuse to claim a cause.</p>
+
+<h2>1.1 What the project is, and is not</h2>
+<table>
+<tr><th style="width:50%">HOPTRACE is</th><th>HOPTRACE is not</th></tr>
+<tr><td>A controlled-testbed research prototype for studying application-to-hop timing correlation.</td><td>A production monitoring product or dashboard for live networks.</td></tr>
+<tr><td>A tool that estimates <i>where along an observed path</i> degradation appears to begin.</td><td>A root-cause analyser. It does not say which router, link or configuration caused anything.</td></tr>
+<tr><td>A system that reports unknown and missing observations as unknown.</td><td>A system that treats silence as health. "No onset detected" is not "healthy".</td></tr>
+<tr><td>An honestly evaluated prototype, including its failures.</td><td>An independently validated detector. No such validation exists yet.</td></tr>
+</table>
+
+<!-- ======================= 2 ======================= -->
+<h1 id="s2" class="nobreak" style="break-before:auto">2. Project Objectives and Scope</h1>
+<h2>2.1 Objectives</h2>
+<ol>
+<li>Build a reproducible testbed in which the path has a known number of hops and faults can be injected on a chosen link.</li>
+<li>Measure the path hop by hop <i>and</i> the application's own RTT against a single shared clock.</li>
+<li>Detect, for every series, when it starts behaving abnormally, and align those onsets in time.</li>
+<li>Report the result in evidence-bounded language, keeping measured facts, inferences, correlations, confidence and unknowns visibly separate.</li>
+<li>Keep the record of what was injected (ground truth) out of reach of the localization engine, and score the engine only afterwards.</li>
+<li>Present stored results in an interactive dashboard that does not recompute or embellish them.</li>
+<li>Evaluate candidate detectors on separate tuning and held-out trial sets, and disclose the outcome, including misses.</li>
+</ol>
+<h2>2.2 In scope and out of scope</h2>
+<table>
+<tr><th style="width:50%">In scope (implemented)</th><th>Out of scope (not implemented, not claimed)</th></tr>
+<tr><td>Linear six-node namespace testbed (client, 4 routers, server)</td><td>Real or multi-path networks; ECMP; IPv6</td></tr>
+<tr><td>Raw-socket TTL probing (TCP-SYN default, UDP optional), 5 hops</td><td>Per-hop packet-level capture or per-packet analysis</td></tr>
+<tr><td>Application ping RTT over a hand-written WebSocket</td><td>Real applications; other protocols</td></tr>
+<tr><td>Latency, jitter, loss and bandwidth impairments via <code>tc</code></td><td>Reliable localization of loss and bandwidth faults (unproven)</td></tr>
+<tr><td>Median/MAD onset detection, timing alignment, typed evidence</td><td>Calibrated confidence; causal inference</td></tr>
+<tr><td>Stored-result dashboard with guided explanation</td><td>Live streaming of new measurements into the dashboard</td></tr>
+<tr><td>Phase 4 / 4b evaluation on small trial sets</td><td>The sealed, full-scale evaluation (spec Phase 5) was not run</td></tr>
+</table>
+
+<!-- ======================= 3 ======================= -->
+<h1 id="s3" class="nobreak" style="break-before:auto">3. Existing Problem and Motivation</h1>
+<p><code>ping</code> and <code>traceroute</code> report per-hop reachability and RTT. They describe the path, but say nothing about what a particular application sees. Application performance monitoring has the opposite blind spot: it sees the symptom but not the path. A network engineer therefore correlates the two by hand, which is slow and hard to reproduce.</p>
+<p>Two practical difficulties motivate HOPTRACE's design:</p>
+<ul>
+<li><b>Clock alignment.</b> To say that two onsets coincide, both measurements must share a timeline. HOPTRACE runs the prober and the application client in the same network namespace and reads the same <code>CLOCK_MONOTONIC</code> clock, so their timestamps are directly comparable without any clock synchronization protocol.</li>
+<li><b>Honest uncertainty.</b> Timing coincidence is not causation, and a hop that does not answer probes is not necessarily healthy. A tool that quietly turns missing data into a confident verdict is worse than no tool. HOPTRACE therefore keeps "unknown" as a first-class state and restricts its sentences to a fixed, evidence-bounded template.</li>
+</ul>
+
+<!-- ======================= 4 ======================= -->
+<h1 id="s4" class="nobreak" style="break-before:auto">4. Proposed Solution and Design Rationale</h1>
+<p>HOPTRACE runs a four-step loop: <b>measure → detect → align → report</b>.</p>
+<ol>
+<li><b>Measure.</b> A raw-socket prober sends TTL-limited probes to hops 1–5 every 500 ms; an application client pings its server at 20 Hz. Both write timestamped JSON-lines files using one monotonic clock.</li>
+<li><b>Detect.</b> Both streams are aggregated into 500 ms buckets. For each series the detector computes a median/MAD baseline and finds the first point where the series stays above <i>median + 5·MAD</i> for three consecutive buckets.</li>
+<li><b>Align.</b> Starting from the shallowest hop, find the first hop whose onset is within 1.5 s of the application's onset <i>and</i> whose deeper hops also show concurrent onsets (persistence downstream).</li>
+<li><b>Report.</b> Convert the result into a typed evidence record and a fixed-template sentence: <i>"Degradation appears to begin at or after Hop N."</i></li>
+</ol>
+<h2 id="s4a">4.1 Design decisions and why</h2>
+<table>
+<tr><th style="width:26%">Decision</th><th>Rationale</th><th style="width:25%">Where in the code</th></tr>
+<tr><td>Prober and application client co-located; one <code>CLOCK_MONOTONIC</code></td><td>Makes onsets directly comparable with no cross-host clock error.</td><td><code>prober/prober.py</code>, <code>app/client.py</code></td></tr>
+<tr><td>Fault is applied to a router's <i>egress</i> link (the link leaving Hop N)</td><td>Hop N's own reply is generated before that link, so the first hop that can show the fault is N+1. The evaluation uses this "Hop N onward" rule.</td><td><code>faultctl/controller.py</code>, <code>evaluate/metrics.py</code></td></tr>
+<tr><td>Ground truth stored under a separate OS identity, outside the repository</td><td>The engine cannot read what was injected: isolation by permissions <i>and</i> by construction (<code>correlate/</code> never imports the ground-truth module).</td><td><code>faultctl/groundtruth.py</code>, <code>setup_identities.sh</code></td></tr>
+<tr><td>Detectors compared on tuning data, scored on held-out data</td><td>Avoids choosing an algorithm by assumption; exposes over-claiming.</td><td><code>evaluate/</code></td></tr>
+<tr><td>Unknown hops stay unknown</td><td>A silent hop is not evidence of health; it lowers confidence instead.</td><td><code>correlate/pipeline.py</code>, <code>evidence.py</code></td></tr>
+<tr><td>Fixed result templates with forbidden-phrase assertions</td><td>Prevents causal language ("caused", "is faulty") from ever being produced.</td><td><code>present/interpret.py</code>, <code>path_bundle.py</code></td></tr>
+<tr><td>Dashboard displays stored bundles only</td><td>The browser cannot silently change a detector result.</td><td><code>frontend/</code></td></tr>
+</table>
+
+<!-- ======================= 5 ======================= -->
+<h2 id="s4b">4.2 What the result means, and what it does not</h2>
+<p>The single most important design point is the <b>boundary of the claim</b>. HOPTRACE's output has exactly four result states, each with a locked sentence:</p>
+<table>
+<tr><th>Result state</th><th>When</th><th>Locked sentence (as in <code>present/interpret.py</code>)</th></tr>
+<tr><td>Localized</td><td>Application onset found, hop range found, confidence <i>high</i></td><td>"Degradation appears to begin at or after Hop N."</td></tr>
+<tr><td>Partially localized</td><td>Hop range found, confidence <i>medium</i> or <i>low</i></td><td>"We detected degradation, but the exact location is uncertain."</td></tr>
+<tr><td>Not localized</td><td>Application onset found, no corroborated hop</td><td>"We detected application degradation, but couldn't establish a reliable network-path location."</td></tr>
+<tr><td>No degradation</td><td>No application onset detected</td><td>"No significant degradation was detected during this test."</td></tr>
+</table>
+<div class="box warn"><div class="bt">Reading the result correctly</div>
+<ul>
+<li>The result says <b>when changes were observed along the path</b>, not <b>why</b>. It does not name a faulty device.</li>
+<li><b>Timing correlation does not establish causation.</b> A hop whose onset lines up with the application's is timing evidence only.</li>
+<li><b>"No significant degradation was detected" means no onset was detected.</b> It can also occur for a real fault that covers most of the observation window, or when there is too little data (Section 9.5).</li>
+<li><b>Unknown ≠ healthy</b> and <b>confidence ≠ probability</b> (Section 9.4).</li>
+</ul></div>
+
+<!-- ======================= 6 ======================= -->
+<h2 id="s4c">4.3 Phases of the project</h2>
+<p>The project follows a locked specification (<code>hoptrace-phase-0-5-spec.html</code>) whose phase numbering is authoritative. Several labels inside code comments and commit messages predate that numbering; the evidence ledger (<code>docs/EVIDENCE_LEDGER.md</code>) records the mapping.</p>
+<table>
+<tr><th class="num">Phase</th><th>Content</th><th>Where</th><th>State</th></tr>
+<tr><td class="num">0</td><td>Controlled testbed: 6 network namespaces</td><td><code>testbed/phase0/</code></td><td>Implemented; re-verified for this report</td></tr>
+<tr><td class="num">1</td><td>Hop-level probing (raw sockets)</td><td><code>prober/</code></td><td>Implemented</td></tr>
+<tr><td class="num">2</td><td>Application telemetry (WebSocket)</td><td><code>app/</code></td><td>Implemented</td></tr>
+<tr><td class="num">3</td><td>Fault controller and isolated ground truth</td><td><code>faultctl/</code></td><td>Implemented</td></tr>
+<tr><td class="num">4</td><td>Correlation engine and algorithm selection</td><td><code>correlate/</code>, <code>evaluate/</code></td><td>Engine implemented; <b>independent gate failed</b></td></tr>
+<tr><td class="num">4b</td><td>Diagnostic retuning after the Phase 4 failure (not a spec phase)</td><td><code>evaluate/*_4b.py</code></td><td>Scored on an <b>exposed</b> set</td></tr>
+<tr><td class="num">5</td><td>Sealed evaluation harness and calibration check</td><td>-</td><td><b>Not started</b></td></tr>
+<tr><td class="num">6</td><td>UI and demo</td><td><code>frontend/</code>, <code>ui/</code>, <code>demo/</code>, <code>present/</code></td><td>Built early; the spec would have required Phase 5 first</td></tr>
+</table>
+<p class="small">The "Phase 5" label inside <code>present/</code> and in commit <code>c202be0</code> refers to the <i>result interpretability layer</i>, not to spec Phase 5. Phase 6 was built before the Phase 5 evaluation, which the specification would not have allowed; this is disclosed, not hidden.</p>

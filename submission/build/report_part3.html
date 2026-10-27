@@ -1,0 +1,138 @@
+<!-- ======================= 8 TOPOLOGY ======================= -->
+<h1 id="s8" class="nobreak">8. Network Topology and Experimental Setup</h1>
+<h2 id="s8a">8.1 Topology</h2>
+<p>The testbed is a straight line of six namespaces. The client hosts both measurement processes; the server hosts the application endpoint; the four routers forward between them and are the only places a fault can be injected.</p>
+<figure>{{TOPOLOGY_SVG}}<figcaption><b>Figure 3.</b> The six-namespace testbed as built by <code>testbed/phase0/setup_topology.sh</code>. Hops 1-4 are the routers; Hop 5 is the server itself. Addresses are those assigned by <code>testbed/phase0/lib/common.sh</code>.</figcaption></figure>
+<div class="tcap"><b>Table 8.1</b> Addressing (subnet N is <code>10.10.N.0/30</code>; the lower node takes <code>.1</code>, the higher node <code>.2</code>)</div>
+<table>
+<tr><th>Subnet</th><th>Low-side node : interface</th><th>High-side node : interface</th><th class="num">Low addr</th><th class="num">High addr</th></tr>
+<tr><td>s1</td><td>ns-client : veth-s1-a</td><td>ns-r1 : veth-s1-b</td><td class="num">10.10.1.1</td><td class="num">10.10.1.2</td></tr>
+<tr><td>s2</td><td>ns-r1 : veth-s2-a</td><td>ns-r2 : veth-s2-b</td><td class="num">10.10.2.1</td><td class="num">10.10.2.2</td></tr>
+<tr><td>s3</td><td>ns-r2 : veth-s3-a</td><td>ns-r3 : veth-s3-b</td><td class="num">10.10.3.1</td><td class="num">10.10.3.2</td></tr>
+<tr><td>s4</td><td>ns-r3 : veth-s4-a</td><td>ns-r4 : veth-s4-b</td><td class="num">10.10.4.1</td><td class="num">10.10.4.2</td></tr>
+<tr><td>s5</td><td>ns-r4 : veth-s5-a</td><td>ns-server : veth-s5-b</td><td class="num">10.10.5.1</td><td class="num">10.10.5.2</td></tr>
+</table>
+<p>The client address is <code>10.10.1.1</code> and the server address <code>10.10.5.2</code>. A router's probe reply is sourced from its client-facing address, so the five hops appear as <code>10.10.1.2, 10.10.2.2, 10.10.3.2, 10.10.4.2, 10.10.5.2</code>, which is exactly what the topology check confirms.</p>
+
+<h2 id="s8b">8.2 Routing and calibration</h2>
+<ul>
+<li><b>Forwarding and routes.</b> <code>net.ipv4.ip_forward=1</code> only in the four router namespaces. Static, explicit per-subnet routes (no aggregation); the client and server each have a single <code>10.10.0.0/16</code> route towards the path.</li>
+<li><b>ICMP rate-limit calibration.</b> Linux's default <code>icmp_ratelimit</code> allows about one ICMP error per second per namespace, which silently suppressed most hop replies at a 500 ms probe cadence (about 60% matched in an early run). The setup script sets <code>icmp_ratelimit=0</code> <i>inside the four router namespaces and the server namespace only</i>. It does not disable packet loss or alter <code>netem</code>/<code>tbf</code> behaviour, and it does not touch the host's own namespace.</li>
+</ul>
+
+<h2 id="s8c">8.3 Probe collection, application RTT collection and fault injection</h2>
+<div class="tcap"><b>Table 8.2</b> Measurement parameters (locked in the specification unless noted)</div>
+<table>
+<tr><th style="width:36%">Parameter</th><th style="width:20%">Value</th><th>Source</th></tr>
+<tr><td>Hops measured</td><td class="num">5 (TTL 1-5)</td><td><code>prober.py: TTL_RANGE</code></td></tr>
+<tr><td>Probes per hop per round</td><td class="num">2</td><td><code>SAMPLES_PER_HOP</code></td></tr>
+<tr><td>Probe round interval</td><td class="num">0.5 s</td><td><code>ROUND_INTERVAL_S</code></td></tr>
+<tr><td>Probe timeout</td><td class="num">0.3 s</td><td><code>PROBE_TIMEOUT_S</code></td></tr>
+<tr><td>Application ping rate</td><td class="num">20 Hz (50 ms)</td><td><code>client.py: PING_INTERVAL_S</code></td></tr>
+<tr><td>Interaction arrivals</td><td class="num">Poisson, mean 2/s</td><td><code>INTERACTION_MEAN_RATE</code></td></tr>
+<tr><td>Interaction budget</td><td class="num">150 ms</td><td><code>INTERACTION_BUDGET_MS</code></td></tr>
+<tr><td>Missing-reply timeout</td><td class="num">2.0 s</td><td><code>MISSING_TIMEOUT_S</code> (a documented choice, not spec-locked)</td></tr>
+<tr><td>Analysis bucket width</td><td class="num">500 ms</td><td><code>synchronize.py: BUCKET_WIDTH_NS</code></td></tr>
+</table>
+<p><b>Timeline of one trial.</b> The app server starts in <code>ns-server</code>; the prober and the application client start together in <code>ns-client</code>; a fault, if any, is injected partway through; both measurement processes run to completion; the fault is cleared. All timestamps come from the same monotonic clock, so a fault's start time (in the ground-truth store) and an onset time (in the analysis) are on one scale, but only the evaluation, never the engine, can see the former.</p>
+
+<h2 id="s8d">8.4 Trial sets</h2>
+<div class="tcap"><b>Table 8.3</b> Experiment sets in <code>experiments/</code> (status as recorded in <code>docs/EVIDENCE_LEDGER.md</code>)</div>
+<table>
+<tr><th style="width:22%">Set</th><th class="num" style="width:8%">Trials</th><th>Role</th><th style="width:30%">Status</th></tr>
+<tr><td><code>p3-*</code></td><td class="num">5</td><td>Exploratory runs of the first (provisional) pipeline</td><td>Exploratory; no reported accuracy</td></tr>
+<tr><td><code>p4-tune-*</code></td><td class="num">12</td><td>Tuning for Phase 4 (<code>mad</code> selected)</td><td>Tuning, historical</td></tr>
+<tr><td><code>p4-held-*</code></td><td class="num">12</td><td>Held-out for Phase 4</td><td class="warn">Independent at Phase 4; <b>EXPOSED</b> from Phase 4b onward</td></tr>
+<tr><td><code>p4b-tune-*</code></td><td class="num">10</td><td>Tuning for Phase 4b (<code>mad_sustained</code> selected)</td><td>Tuning, historical</td></tr>
+<tr><td><code>demo-run-01</code></td><td class="num">1</td><td>Live demonstration run</td><td>Demo; not an evaluation trial</td></tr>
+</table>
+<p>Each 12-trial set contains four clean controls and eight fault trials (latency, jitter, loss and bandwidth, at different hops and magnitudes, some transient), plus trials in which one or two hops return no responses ("unknown" trials). The repository's evidence ledger notes that the 12-trial sets are far below the 120-trial tuning set and 288-cell matrix described in the specification; the reduction is disclosed in <code>evaluate/power_calc.py</code>.</p>
+
+<h2 id="s8e">8.5 Topology verification (run for this report)</h2>
+<p>On 27 October 2026 the topology was built, checked and torn down in WSL2 Ubuntu 24.04 with the project's own scripts (no ground-truth database, identity or recorded trial was touched):</p>
+<pre class="cmd">bash testbed/phase0/setup_topology.sh      # → "topology up."  icmp_ratelimit calibration: 0 (ns-r1, expect 0)
+bash testbed/phase0/verify_topology.sh
+  Test 1: 200 packets transmitted, 200 received, 0% packet loss   rtt min/avg/max/mdev = 0.017/0.049/0.158/0.020 ms   PASS
+  Test 2: run 1: 10.10.1.2 10.10.2.2 10.10.3.2 10.10.4.2 10.10.5.2                                                PASS
+          run 2: 10.10.1.2 10.10.2.2 10.10.3.2 10.10.4.2 10.10.5.2                                                PASS
+bash testbed/phase0/teardown_topology.sh   # → namespaces removed; `ip netns list` empty afterwards</pre>
+<p class="small">The recorded demo trial (<code>demo-run-01</code>) was produced by an earlier live run of <code>demo/run_demo.sh</code> and was <b>not</b> regenerated for this report, because that script overwrites the recorded trial.</p>
+
+<!-- ======================= 9 ALGORITHMS ======================= -->
+<h1 id="s9">9. Algorithms and Methodology</h1>
+<h2 id="s9a">9.1 Synchronisation into 500 ms buckets</h2>
+<p>Because the prober and the application client are separate processes with separate counters, there are no shared sequence IDs. Alignment instead uses the shared clock: all <code>t_send_mono_ns</code> values are placed on one timeline starting at the earliest sample, and divided into 500 ms buckets (the coarser of the two cadences; pings run at 20 Hz, probe rounds at 2 Hz). For bucket <i>b</i>, the application value is the <b>mean RTT of the pings that responded</b> in it, and the value for hop <i>k</i> is the mean RTT of the probes to TTL <i>k</i> that responded. A bucket with samples but no response is <b>unknown</b>; a bucket with no value is skipped by the detector and never interpolated.</p>
+
+<h2 id="s9b">9.2 Onset detection (median / MAD, sustained)</h2>
+<p>For one series with valid values <i>x<sub>1</sub>…x<sub>n</sub></i> (n ≥ 5, otherwise no onset can be claimed):</p>
+<p style="text-align:center"><i>m</i> = median(<i>x</i>), &nbsp; <i>MAD</i> = median(|<i>x<sub>i</sub></i> − <i>m</i>|), &nbsp; <i>T</i> = <i>m</i> + <i>k</i>·<i>MAD</i> &nbsp; with <i>k</i> = 5 (<code>k_mad</code>)</p>
+<p>The <b>onset</b> is the time of the first bucket of the first run of at least <code>min_run</code> = 3 <b>consecutive</b> values above <i>T</i>. A single noisy bucket above <i>T</i> does not count. (If the series is perfectly flat the MAD is replaced by 10<super>-9</super> to avoid division by zero.) These are exactly the operations in <code>detect_onset_mad_sustained</code> (Section 7.3). Figure 4 shows them on the recorded <code>demo-run-01</code>.</p>
+<figure><img src="../figures/fig_demo_run_series.png" style="width:86%" alt="Bucketed RTT series for the application, hop 2 and hop 3"><figcaption><b>Figure 4.</b> Measured series from <code>experiments/demo-run-01</code> (500 ms buckets), recomputed with the project's own modules; the onsets drawn equal those stored in <code>evidence_demo.json</code> (checked by <code>submission/build/make_figures.py</code>). The application and Hop 3 both show an onset at +25.0 s. Hop 2 has one noisy bucket above its threshold near 15 s, which the three-in-a-row rule correctly ignores; its probes show no onset.</figcaption></figure>
+
+<h2 id="s9c">9.3 Timing alignment and downstream persistence</h2>
+<p>Let <i>t<sub>app</sub></i> be the application onset and <i>t<sub>k</sub></i> the onset of hop <i>k</i> (if any). Two onsets are <b>concurrent</b> when |<i>t<sub>k</sub></i> − <i>t<sub>app</sub></i>| ≤ Δ with Δ = <b>1.5 s</b> (three probe rounds; a documented default that has <b>not</b> been validated). The engine scans hops from the shallowest and reports the first hop <i>c</i> such that</p>
+<ol>
+<li>hop <i>c</i> has an onset concurrent with the application's, <b>and</b></li>
+<li>every hop from <i>c</i> through the deepest measured hop also has a concurrent onset.</li>
+</ol>
+<p>The second condition is the <i>persistence</i> test: a hop that spikes alone, with nothing downstream, is evidence <i>against</i> localizing there. The result is the range <code>{min: c, max: deepest corroborating hop}</code>. If there is no application onset, nothing is localized. If there is an application onset but no hop satisfies both conditions, the result is "not localized".</p>
+
+<h2 id="s9d">9.4 Evidence representation, confidence and interpretation</h2>
+<p>A hop is marked <b>unknown</b> if, among the buckets in which it was probed, at least 50% received no response at all (<code>UNKNOWN_FRACTION_THRESHOLD = 0.5</code>, fixed, not tuned). The confidence claim is the following <b>fixed heuristic</b>:</p>
+<p style="text-align:center"><i>score</i> = <i>corroborating fraction</i> × (1 − |<i>unknown hops</i>| / 5) &nbsp;&nbsp; high ≥ 0.8 · medium ≥ 0.5 · low &gt; 0 · otherwise insufficient</p>
+<div class="box warn"><div class="bt">What the confidence score is, and is not</div>
+<ul>
+<li>It is <b>not a probability</b> and has not been calibrated. It does not measure how strong the signal was.</li>
+<li>Because the persistence rule already requires every downstream hop to corroborate, the corroborating fraction is <b>1.0 whenever a range is reported</b>, so in practice the level depends only on how many hops were unknown: 0 unknown → 1.0 (<i>high</i>); 1 → 0.8 (<i>high</i>); 2 → 0.6 (<i>medium</i>); 3 → 0.4 (<i>low</i>).</li>
+<li>The stored calibration tables show the weakness. In the independent Phase 4 run, the four <i>high</i>-confidence claims had an observed accuracy of only 0.5 (two of them were confident claims on clean controls); the Brier score was 0.432 (n = 5). In the exposed Phase 4b set the Brier score was 0.04 (n = 4), a figure from a small, inspected set and not evidence of calibration.</li>
+</ul></div>
+<p>Interpretation then maps the record to one of the four locked sentences (Section 4.2): only <i>high</i> confidence yields "Degradation appears to begin at or after Hop N"; <i>medium</i> or <i>low</i> yields "Partially localized".</p>
+
+<h2 id="s9e">9.5 Limitations of the methodology</h2>
+<ul>
+<li><b>Global baseline.</b> The threshold uses the median and MAD of the <i>whole</i> series. It assumes the fault covers a <i>minority</i> of the window so that the median still represents "normal". If a fault covers most of the window, the median sits inside the faulted region and the detector reports no onset. The demo script documents a first version with a 10 s baseline and 25 s fault that produced exactly this false negative; the recorded demo therefore uses a 25 s baseline and runs in the detector's <i>favourable regime</i>.</li>
+<li><b>No "insufficient data" state.</b> "No onset" cannot be distinguished from "the detector could not establish a baseline".</li>
+<li><b>Near-silent series.</b> On sub-millisecond hop series the MAD can be tiny, so the threshold becomes an almost-zero absolute gap; this was the diagnosed cause of clean-control false positives in Phase 4 and the motivation for requiring a sustained run.</li>
+<li><b>Resolution.</b> Onsets are quantised to 500 ms, and the 1.5 s alignment window is fixed and unvalidated.</li>
+<li><b>RTT as the only observable.</b> No candidate localized any loss or bandwidth trial. The project records, as an open and unresolved problem in <code>frozen_config_4b.json</code>, that RTT-based onset detection may be the wrong observable for these two fault types; this has not been tested further.</li>
+<li><b>Correlation, not causation.</b> Concurrent onsets are timing evidence only.</li>
+</ul>
+
+<h2 id="s9f">9.6 Algorithm selection (Phases 4 and 4b)</h2>
+<p>Phase 4 implemented five detectors behind one interface (<code>detect_onset(series, t)</code>) and compared them on a 12-trial tuning set; the selection rule was within-one-hop accuracy first, false attribution second, Brier score third. <code>mad</code> ranked first and was frozen with <code>k_mad = 5.0</code>.</p>
+<div class="tcap"><b>Table 9.1</b> Phase 4 tuning-set scoreboard (12 tuning trials: 8 faults, 4 clean controls; from <code>evaluate/frozen_config.json</code>)</div>
+<table>
+<tr><th>Detector</th><th class="num">Within ±1 hop</th><th class="num">Exact hop</th><th class="num">False attribution</th><th class="num">Clean-control FP</th><th class="num">Recall</th><th class="num">Brier (n)</th></tr>
+<tr><td>threshold (strawman)</td><td class="num">0/0</td><td class="num">0/0</td><td class="num">0/12</td><td class="num">0/4</td><td class="num">0/8</td><td class="num">n/a (0)</td></tr>
+<tr><td><b>mad</b> (selected)</td><td class="num">4/4</td><td class="num">2/4</td><td class="num">2/12</td><td class="num">0/4</td><td class="num">4/8</td><td class="num">0.040 (4)</td></tr>
+<tr><td>cusum</td><td class="num">4/4</td><td class="num">3/4</td><td class="num">2/12</td><td class="num">1/4</td><td class="num">4/8</td><td class="num">0.160 (5)</td></tr>
+<tr><td>bocpd</td><td class="num">3/4</td><td class="num">3/4</td><td class="num">1/12</td><td class="num">0/4</td><td class="num">4/8</td><td class="num">0.250 (4)</td></tr>
+<tr><td>pelt</td><td class="num">2/3</td><td class="num">1/3</td><td class="num">2/12</td><td class="num">0/4</td><td class="num">3/8</td><td class="num">0.333 (3)</td></tr>
+</table>
+<p>After <code>mad</code> missed the false-attribution target on the held-out set (Section 12.1), Phase 4b inspected the artifacts, diagnosed the mechanism (Section 9.5), defined three variants, and compared them on a <b>new</b> 10-trial tuning set (4 clean controls, 2 loss, 2 bandwidth, 1 jitter, 1 latency).</p>
+<div class="tcap"><b>Table 9.2</b> Phase 4b tuning-set scoreboard (10 new tuning trials; from <code>evaluate/frozen_config_4b.json</code>)</div>
+<table>
+<tr><th>Detector</th><th class="num">Within ±1 hop</th><th class="num">Exact hop</th><th class="num">False attribution</th><th class="num">Clean-control FP</th><th class="num">Recall</th><th class="num">Brier (n)</th></tr>
+<tr><td>mad_v1_frozen (Phase 4)</td><td class="num">2/2</td><td class="num">1/2</td><td class="num">2/10</td><td class="num">1/4</td><td class="num">2/6</td><td class="num">0.333 (3)</td></tr>
+<tr><td>mad_absfloor</td><td class="num">2/2</td><td class="num">2/2</td><td class="num">0/10</td><td class="num">0/4</td><td class="num">2/6</td><td class="num">0.000 (2)</td></tr>
+<tr><td><b>mad_sustained</b> (selected)</td><td class="num">2/2</td><td class="num">2/2</td><td class="num">0/10</td><td class="num">0/4</td><td class="num">2/6</td><td class="num">0.000 (2)</td></tr>
+<tr><td>mad_largest_run</td><td class="num">2/2</td><td class="num">2/2</td><td class="num">1/10</td><td class="num">1/4</td><td class="num">2/6</td><td class="num">0.333 (3)</td></tr>
+</table>
+<p><code>mad_absfloor</code> and <code>mad_sustained</code> tied exactly. The automated ranking picked <code>mad_absfloor</code> only through sort order; the tie was broken <b>manually</b> in favour of <code>mad_sustained</code> because requiring persistence encodes "sustained degradation" directly, whereas <code>mad_absfloor</code> relies on a fixed 0.5 ms constant. Both are disclosed as equally supported by the tuning data. On this tuning set, <b>loss and bandwidth were 0/2 each for every candidate</b>.</p>
+
+<!-- ======================= 10 DASHBOARD ======================= -->
+<h1 id="s10" class="nobreak">10. Dashboard and User Interaction</h1>
+<p>All screenshots in this section and the appendix were captured on 27 October 2026 from the <b>current production build</b> of <code>frontend/</code> (<code>npm run build</code>, served locally by <code>npm run preview</code> on 127.0.0.1) in a real browser. They show stored data only; no figure was drawn by hand.</p>
+
+<h2 id="s10a">10.1 Trial selection</h2>
+<p>The page opens on a persistent <i>Research prototype</i> banner that states the validation status, then a headline and a <b>trial picker</b>. Each button loads one stored presentation bundle from the project's own experiments: <code>demo-run-01</code> (a live demo run), <code>p4-held-01-clean1</code> (a clean control), <code>p4-held-04-latency-hop2-moderate</code> and <code>p4-held-12-unknown-plus-impair</code> (two held-out trials). The <i>Guided explanation</i> toggle is <b>off</b> by default.</p>
+<figure><img class="shot" src="../screenshots/01-landing-trial-picker.png" style="width:92%"><figcaption><b>Figure 5.</b> Landing view: validation banner, headline, trial picker and the guided-explanation toggle (Off).</figcaption></figure>
+
+<h2 id="s10b">10.2 RTT visualisation: the symptom first</h2>
+<p>The first section shows only what the <b>application</b> measured: its own ping RTT on a logarithmic axis, the stored mean before and after the detected onset (dashed violet lines), the onset marker, and the number of ping samples. It is labelled as the symptom, not the location.</p>
+<figure><img class="shot" src="../screenshots/02-application-rtt-chart.png" style="width:88%"><figcaption><b>Figure 6.</b> Application RTT for <code>demo-run-01</code>: mean 0.633 ms before the onset and 90.4 ms after, over 700 pings and 35.9 s; onset at +25.0 s.</figcaption></figure>
+
+<h2 id="s10c">10.3 Path and hop inspection</h2>
+<p>The next section draws the path (client, Hops 1-4 as routers, Hop 5 as the server). Each hop carries a status taken from the stored bundle: <b>corroborated onset</b> (coral), <b>no corroborated onset</b> (lime; <i>not proof of health</i>) or <b>unknown</b> (yellow, hatched). Selecting a hop opens the <b>hop inspector</b>: mean RTT before and after that hop's onset, probe samples, the onset time of the hop and of the application, the stored evidence sentences and measured facts, and the raw stored hop record. A hatched link means an onset persists across both neighbouring hops. The moving packets are <b>illustrative only</b>: the data contain no packet-level observations, and the page says so beside a <i>Pause packet animation</i> control.</p>
+<figure><img class="shot" src="../screenshots/03-path-and-hop-inspector.png" style="width:90%"><figcaption><b>Figure 7.</b> <code>demo-run-01</code>: Hops 1 and 2 show no corroborated onset; Hops 3, 4 and 5 are corroborated, with "Appears to begin at or after here" on Hop 3. The inspector shows Hop 3: 0.015 ms before and 90.3 ms after its onset at +25.0 s (140 probe samples). The moving packets are an illustration, not measured traffic.</figcaption></figure>
+<figure><img class="shot" src="../screenshots/04-unknown-hops-trial.png" style="width:90%"><figcaption><b>Figure 8.</b> <code>p4-held-12-unknown-plus-impair</code>: Hops 1 and 2 returned too few responses and are shown as <b>unknown</b>, not healthy. The result is <i>partially localized</i> with <i>medium</i> confidence (Hop 3 inspected: 0.040 ms before, 22.5 ms after, onset +10.5 s against an application onset at +10.0 s, 58 probe samples). In the stored evaluation the first hop the injected fault could affect was Hop 2, which was itself unknown (no responses), so it could not be corroborated; the detector reported Hop 3 and the trial was scored as a false attribution (Section 12.2).</figcaption></figure>

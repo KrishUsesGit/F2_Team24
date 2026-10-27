@@ -1,0 +1,537 @@
+<title>Hoptrace Phase 0–5 Specification</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap');
+
+  :root{
+    --bg:#f5f6f8; --surface:#ffffff; --surface-2:#edf0f4; --surface-3:#e2e7ed;
+    --border:#d8dee6; --text:#17202b; --text-muted:#5a6472; --text-faint:#8892a0;
+    --accent:#205fa6; --accent-soft:#e7eefb; --accent-ink:#14406f;
+    --warn:#a6641b; --warn-soft:#fbeee0;
+    --danger:#a6362a; --danger-soft:#f7e6e3;
+    --good:#227050; --good-soft:#e2f3ea;
+    --font-display:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-body:'Source Serif 4', Georgia, 'Iowan Old Style', serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e131c; --surface:#151c28; --surface-2:#1b2432; --surface-3:#232f40;
+      --border:#2b3646; --text:#e7ecf3; --text-muted:#9aa7b8; --text-faint:#6d7889;
+      --accent:#75aae9; --accent-soft:#1c2f4a; --accent-ink:#cfe1f8;
+      --warn:#dba766; --warn-soft:#38291a;
+      --danger:#e08e81; --danger-soft:#3a221f;
+      --good:#7bcaa3; --good-soft:#173a29;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e131c; --surface:#151c28; --surface-2:#1b2432; --surface-3:#232f40;
+    --border:#2b3646; --text:#e7ecf3; --text-muted:#9aa7b8; --text-faint:#6d7889;
+    --accent:#75aae9; --accent-soft:#1c2f4a; --accent-ink:#cfe1f8;
+    --warn:#dba766; --warn-soft:#38291a;
+    --danger:#e08e81; --danger-soft:#3a221f;
+    --good:#7bcaa3; --good-soft:#173a29;
+  }
+
+  *{box-sizing:border-box;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); font-size:16.5px; line-height:1.65; padding-inline:20px;}
+  h1,h2,h3,h4{font-family:var(--font-display); text-wrap:balance; color:var(--text); font-weight:600;}
+  a{color:var(--accent);}
+  code, .mono{font-family:var(--font-mono);}
+
+  .shell{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:250px minmax(0,1fr); gap:48px; padding-block:36px 80px;}
+  @media (max-width:960px){ .shell{grid-template-columns:1fr;} }
+
+  .masthead{grid-column:1/-1; margin-bottom:8px;}
+  .eyebrow{font-family:var(--font-mono); font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint); display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .masthead h1{font-size:clamp(1.7rem,3.6vw,2.4rem); line-height:1.1; margin:0 0 10px;}
+  .masthead .sub{color:var(--text-muted); font-size:1.05rem; max-width:66ch; margin:0 0 20px;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  .meta-tag{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.04em; color:var(--text-faint); border:1px solid var(--border); padding:6px 10px; border-radius:3px; background:var(--surface);}
+
+  .legend{display:flex; flex-wrap:wrap; gap:14px; margin:18px 0 4px; padding:14px 16px; border:1px solid var(--border); border-radius:6px; background:var(--surface);}
+  .legend-item{display:flex; align-items:center; gap:8px; font-size:.86rem; color:var(--text-muted);}
+
+  nav.toc{position:sticky; top:24px; align-self:start; max-height:calc(100vh - 48px); overflow-y:auto;}
+  nav.toc .toc-title{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:12px;}
+  nav.toc ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--border);}
+  nav.toc a{display:block; text-decoration:none; color:var(--text-muted); font-size:.86rem; padding:5px 0 5px 14px; border-left:2px solid transparent; margin-left:-1px;}
+  nav.toc a:hover{color:var(--text); border-left-color:var(--accent-soft);}
+  nav.toc .toc-num{font-family:var(--font-mono); color:var(--text-faint); font-size:.75rem; margin-right:6px;}
+  nav.toc .toc-final a{color:var(--accent); font-weight:600;}
+
+  details.mobile-toc{display:none;}
+  @media (max-width:960px){
+    nav.toc{display:none;}
+    details.mobile-toc{display:block; border:1px solid var(--border); border-radius:6px; background:var(--surface); padding:10px 14px; margin-bottom:8px;}
+    details.mobile-toc summary{font-family:var(--font-mono); font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; color:var(--text-muted);}
+    details.mobile-toc ol{list-style:none; margin:10px 0 0; padding:0; columns:2; gap:0 20px;}
+    details.mobile-toc a{display:block; font-size:.85rem; padding:4px 0; color:var(--text-muted); text-decoration:none;}
+  }
+
+  main{min-width:0;}
+  section{padding-block:34px; border-bottom:1px solid var(--border); scroll-margin-top:20px;}
+  section:last-of-type{border-bottom:none;}
+  .hop{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.1em; color:var(--accent); display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .hop::before{content:''; width:16px; height:1px; background:var(--accent);}
+  section h2{font-size:1.45rem; margin:0 0 16px;}
+  section h3{font-size:1.08rem; margin:26px 0 10px; color:var(--text);}
+  section h4{font-size:.96rem; margin:18px 0 8px; color:var(--text); font-family:var(--font-mono); letter-spacing:.02em;}
+  section p{margin:0 0 14px; max-width:72ch;}
+  section ul, section ol{margin:0 0 14px; padding-left:22px; max-width:72ch;}
+  section li{margin-bottom:6px;}
+  strong{color:var(--text); font-weight:600;}
+  .lede{font-size:1.08rem; color:var(--text); max-width:68ch;}
+
+  .callout{border:1px solid var(--border); border-left:3px solid var(--accent); background:var(--surface); border-radius:4px; padding:16px 18px; margin:18px 0; max-width:74ch;}
+  .callout.good{border-left-color:var(--good);}
+  .callout.warn{border-left-color:var(--warn);}
+  .callout-label{font-family:var(--font-mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:6px;}
+  .callout.good .callout-label{color:var(--good);}
+  .callout.warn .callout-label{color:var(--warn);}
+  .callout p{margin:0; font-size:.98rem;}
+
+  .tag{display:inline-flex; align-items:center; gap:.4em; padding:.18em .6em; border-radius:3px; font-family:var(--font-mono); font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;}
+  .tag--locked{background:var(--good-soft); border:1px solid var(--good); color:var(--good);}
+  .tag--open{background:var(--warn-soft); border:1px dashed var(--warn); color:var(--warn);}
+
+  .decision{display:flex; align-items:flex-start; gap:10px; margin:0 0 10px;}
+  .decision .tag{flex:0 0 auto; margin-top:2px;}
+  .decision p{margin:0;}
+
+  .table-wrap{overflow-x:auto; margin:16px 0 20px; max-width:100%;}
+  table{border-collapse:collapse; width:100%; font-size:.9rem; min-width:520px;}
+  th, td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{font-family:var(--font-mono); font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); font-weight:500;}
+  tbody tr:hover{background:var(--surface-2);}
+  td.num, th.num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  td code{font-size:.85em;}
+
+  pre.schema{background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:14px 16px; overflow-x:auto; font-family:var(--font-mono); font-size:.82rem; line-height:1.55; margin:12px 0 20px; max-width:100%;}
+  pre.schema .k{color:var(--accent);}
+  pre.schema .s{color:var(--good);}
+  pre.schema .c{color:var(--text-faint);}
+
+  .diagram-card{border:1px solid var(--border); border-radius:6px; background:var(--surface); padding:18px; margin:18px 0 22px;}
+  .diagram-card svg{width:100%; height:auto; display:block;}
+  .diagram-caption{font-family:var(--font-mono); font-size:.72rem; color:var(--text-faint); margin-top:10px; letter-spacing:.02em;}
+
+  .gate{border:1px solid var(--border); border-radius:6px; padding:16px 18px; margin-bottom:16px; max-width:78ch;}
+  .gate-head{display:flex; align-items:baseline; gap:10px; margin-bottom:8px;}
+  .gate-head h4{margin:0; font-size:1rem; color:var(--text);}
+  .gate-num{font-family:var(--font-mono); color:var(--accent); font-size:.8rem;}
+  .gate ul{margin:6px 0 0; padding-left:20px;}
+  .gate li{font-size:.92rem; margin-bottom:4px;}
+
+  footer.doc-footer{grid-column:1/-1; margin-top:8px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  footer.doc-footer span{font-family:var(--font-mono); font-size:.75rem; color:var(--text-faint);}
+
+  ::selection{background:var(--accent-soft); color:var(--accent-ink);}
+</style>
+
+<div class="shell">
+  <div class="masthead">
+    <div class="eyebrow"><span class="dot"></span> Computer Networks &middot; Technical Specification &middot; Pre-Implementation</div>
+    <h1>HOPTRACE — Phase 0–5 Locked Specification</h1>
+    <p class="sub">Interfaces, schemas, testbed topology, and evaluation methodology for the seven approved architecture changes, plus a new algorithm-selection experiment for changepoint detection. No code is written or executed by this document.</p>
+    <div class="meta-row">
+      <span class="meta-tag">companion to: Hoptrace Architecture Review</span>
+      <span class="meta-tag">covers Phase 0 → Phase 5</span>
+      <span class="meta-tag">status: for review, not yet approved for coding</span>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="tag tag--locked">Locked</span> decided — implement exactly as specified</div>
+      <div class="legend-item"><span class="tag tag--open">Open</span> ambiguity — needs a decision before Phase 1 coding begins (full list in §10)</div>
+    </div>
+    <div class="callout good" style="max-width:none; margin-top:16px;">
+      <div class="callout-label">Revision v1.1 — 5 amendments approved 2026-09-16</div>
+      <p>(1) Probe transport un-locked, now a Phase 1 UDP-vs-TCP-SYN selection experiment — §05, §07, §11.5. (2) Fault terminology constraint added ("Hop N onward", never "Router N is faulty") — new §02 C8, §03. (3) Phase 5 repeat count un-locked, replaced by a pilot-then-power-analysis procedure — §09, §10, §11.3. (4) Confidence-model data separation strictly enforced across Phase 4a/4/5, no fitting on held-out data — new §02 C9, §08, §11.1. (5) Phase 0 sequencing clarified: basic networking before isolation hardening — §04, and the companion Phase 0 Implementation Plan.</p>
+    </div>
+  </div>
+
+  <details class="mobile-toc">
+    <summary>Contents</summary>
+    <ol>
+      <li><a href="#s01">01 Reading This Spec</a></li>
+      <li><a href="#s02">02 Global Constraints</a></li>
+      <li><a href="#s03">03 Testbed Topology</a></li>
+      <li><a href="#s04">04 Fault-Controller Isolation</a></li>
+      <li><a href="#s05">05 Measurement Protocol</a></li>
+      <li><a href="#s06">06 Data Schemas</a></li>
+      <li><a href="#s07">07 Interfaces</a></li>
+      <li><a href="#s08">08 Algorithm Candidates &amp; Selection Experiment</a></li>
+      <li><a href="#s09">09 Evaluation Methodology</a></li>
+      <li><a href="#s10">10 Phase Gates &amp; Success Criteria</a></li>
+      <li><a href="#s11">11 Remaining Ambiguities</a></li>
+    </ol>
+  </details>
+
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#s01"><span class="toc-num">01</span>Reading This Spec</a></li>
+      <li><a href="#s02"><span class="toc-num">02</span>Global Constraints</a></li>
+      <li><a href="#s03"><span class="toc-num">03</span>Testbed Topology</a></li>
+      <li><a href="#s04"><span class="toc-num">04</span>Controller Isolation</a></li>
+      <li><a href="#s05"><span class="toc-num">05</span>Measurement Protocol</a></li>
+      <li><a href="#s06"><span class="toc-num">06</span>Data Schemas</a></li>
+      <li><a href="#s07"><span class="toc-num">07</span>Interfaces</a></li>
+      <li><a href="#s08"><span class="toc-num">08</span>Algorithm Selection</a></li>
+      <li><a href="#s09"><span class="toc-num">09</span>Evaluation Method</a></li>
+      <li><a href="#s10"><span class="toc-num">10</span>Phase Gates</a></li>
+      <li class="toc-final"><a href="#s11"><span class="toc-num">11</span>Open Ambiguities →</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="s01">
+      <div class="hop">§01</div>
+      <h2>Reading This Spec</h2>
+      <p class="lede">Every design decision below is tagged <span class="tag tag--locked">Locked</span> or <span class="tag tag--open">Open</span>. Locked means: implement it exactly as written, do not re-derive it during coding. Open means: a specific, named decision is still outstanding, and §11 collects every one of them in one place with what's needed to close it. Nothing in Phase 0–3 has an open dependency that blocks starting; Phase 4's algorithm choice is deliberately left open because it is itself the output of an experiment specified in §08, not a decision made in this document.</p>
+      <p>Schemas are given as JSON Schema-style field lists, not full validators. Interfaces are given as typed signatures, not implementations — this document specifies contracts between components, it does not write the components.</p>
+    </section>
+
+    <section id="s02">
+      <div class="hop">§02</div>
+      <h2>Global Constraints</h2>
+      <p>Binding across every phase — restated from the approved review as hard constraints, not preferences:</p>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C1 — Single clock.</strong> The application client and the path prober run as two processes/threads on the same host, reading the same monotonic clock (<code>CLOCK_MONOTONIC</code>). No component may compute a duration from two timestamps taken on different hosts.</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C2 — Testbed is the evaluation vehicle.</strong> All accuracy, precision/recall, false-attribution, and calibration numbers in the final report are computed exclusively from testbed trials with logged ground truth. Any live-internet run is labeled "qualitative demonstration — no ground truth" in every artifact that shows it.</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C3 — No thresholds without a changepoint model behind them.</strong> The localization engine's onset detection stage must be one of the candidates in §08, selected by the experiment in §08, not a hand-picked constant.</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C4 — Ground truth is structurally unreadable by the engine.</strong> Enforced at the OS/process level per §04, not by convention.</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C5 — Every engine output is a typed evidence object.</strong> No component downstream of the correlation engine may construct a user-facing string that asserts causation; only the evidence-object renderer (§06, <code>EvidenceRecord</code>) may produce report text, and only from the five permitted tags (fact / inference / correlation / confidence / unknown).</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C6 — Testbed runs on a real Linux kernel.</strong> WSL2 or a Linux VM/cloud instance; network namespaces and <code>tc</code> are not available on native Windows.</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C7 — v1 scope excludes multi-fault trials and ECMP-mesh topologies.</strong> The topology in §03 is strictly linear; multiple simultaneous faults are not part of the Phase 0–5 evaluation matrix.</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C8 — Fault terminology.</strong> <code>tc netem</code> impairs a router's egress interface / link segment. It does not prove the router itself is faulty. Every log line, code comment, evidence string, and UI label uses "degradation first appears at/after Hop N" or "Hop N onward" — never "Hop N caused the lag" or "Router N is faulty." This applies to internal engineering artifacts (commit messages, code comments) as well as user-facing output — the discipline degrades if it's only enforced at the UI layer.</p></div>
+      <div class="decision"><span class="tag tag--locked">Locked</span><p><strong>C9 — Confidence-model data separation.</strong> Phase 4a produces tuning/training data only. Phase 4 selects and freezes the changepoint algorithm, its hyperparameters, the δ_align tolerance, and the confidence-score weights — all four, together, as one frozen artifact. Phase 5 uses a completely held-out test set for final evaluation only. No weight, hyperparameter, or tolerance may be fitted, adjusted, or re-derived using Phase 5 results, under any circumstance, including a disappointing Phase 5 result — a disappointing result is reported, not used to retroactively retune Phase 4.</p></div>
+    </section>
+
+    <section id="s03">
+      <div class="hop">§03</div>
+      <h2>Testbed Topology</h2>
+      <p><span class="tag tag--locked">Locked</span> Six network namespaces on one Linux host, connected linearly by point-to-point <code>veth</code> pairs. This exact topology is what every hop number in every later section refers to.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Namespace</th><th>Role</th><th>TTL / Hop #</th><th>Addressing</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ns-client</td><td>App client + path prober (C1)</td><td>—</td><td class="mono">10.10.1.1</td></tr>
+            <tr><td class="mono">ns-r1</td><td>Forwarding router</td><td class="num">TTL 1 → Hop 1</td><td class="mono">10.10.1.2 / 10.10.2.1</td></tr>
+            <tr><td class="mono">ns-r2</td><td>Forwarding router</td><td class="num">TTL 2 → Hop 2</td><td class="mono">10.10.2.2 / 10.10.3.1</td></tr>
+            <tr><td class="mono">ns-r3</td><td>Forwarding router, primary fault-injection point in the demo script</td><td class="num">TTL 3 → Hop 3</td><td class="mono">10.10.3.2 / 10.10.4.1</td></tr>
+            <tr><td class="mono">ns-r4</td><td>Forwarding router</td><td class="num">TTL 4 → Hop 4</td><td class="mono">10.10.4.2 / 10.10.5.1</td></tr>
+            <tr><td class="mono">ns-server</td><td>App server + probe responder</td><td class="num">TTL 5 → Hop 5 (Server)</td><td class="mono">10.10.5.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Each <code>ns-r{N}</code> has <code>net.ipv4.ip_forward=1</code> and exactly two routes: a default route toward the server side (next hop's near address) and one specific route back toward <code>10.10.1.0/24</code> summarized for the client side. Because the topology is strictly linear, no dynamic routing protocol is needed — every route is a static one-liner, which also means route flapping (a §16 failure case in the review) cannot occur inside the testbed itself; it is reproduced only synthetically, if at all, as a stretch-goal experiment, never by accident.</p>
+      <p>Each <code>ns-r{N} ↔ ns-r{N+1}</code> veth pair is a dedicated <code>/30</code> subnet, matching the table above. <code>tc qdisc … netem</code> is attached to the egress side of each router's <em>server-facing</em> interface — i.e., an impairment "at Hop 3" is applied to <code>ns-r3</code>'s interface facing <code>ns-r4</code>, so it affects everything from that point forward, matching the persistence pattern the localization algorithm (review §11) is built to detect.</p>
+      <div class="callout good">
+        <div class="callout-label">Terminology (C8)</div>
+        <p>Injecting <code>netem</code> at <code>ns-r3</code>'s egress interface impairs that <em>link segment</em> — it says nothing about whether a real router at that position would itself be faulty. Every reference to this, in code and in the UI, is written as "degradation first appears at/after Hop 3" or "Hop 3 onward," never "Hop 3 caused the lag" or "the Hop 3 router is faulty."</p>
+      </div>
+    </section>
+
+    <section id="s04">
+      <div class="hop">§04</div>
+      <h2>Fault-Controller Isolation</h2>
+      <p><span class="tag tag--locked">Locked</span> Isolation is enforced at three independent layers, so that no single mistake (a wrong file permission, a stray import) leaks ground truth into the engine:</p>
+      <h4>Process / OS-user layer</h4>
+      <p>The fault controller runs as OS user <code>hoptrace-truth</code>. The correlation engine and Analysis API run as OS user <code>hoptrace-engine</code>. Neither is a member of the other's group.</p>
+      <h4>Filesystem layer</h4>
+      <p>The ground-truth log (<code>GroundTruthEvent</code> records, §06) is written to a SQLite file owned by <code>hoptrace-truth:hoptrace-truth</code>, mode <code>640</code>. <code>hoptrace-engine</code> has no read bit. The evaluation harness (§09) runs as a third user, <code>hoptrace-eval</code>, which is the only account in the <code>hoptrace-truth</code> group and can therefore read the log — and only the log; it has no write access to it either, so the evaluation harness cannot retroactively "correct" ground truth to fit results.</p>
+      <h4>Network layer</h4>
+      <p>The fault controller's only network capability is executing <code>ip netns exec ns-r{N} tc qdisc …</code> against the host's own namespaces — it opens no listening socket and is not reachable from <code>ns-client</code> or <code>ns-server</code>. The Analysis API (§07) exposes no endpoint that accepts a hop number and returns or echoes ground-truth data.</p>
+      <div class="callout warn">
+        <div class="callout-label">Why three layers, not one</div>
+        <p>A single-layer control (e.g. "the engine's code just doesn't read that file") is a convention, not an isolation guarantee — it's exactly the kind of shortcut that quietly makes the Phase 5 evaluation circular if a future contributor adds a debugging endpoint that happens to expose it. Three independent layers mean a mistake in one doesn't compromise the guarantee.</p>
+      </div>
+      <div class="callout good">
+        <div class="callout-label">Sequencing note</div>
+        <p>This architecture is fully realized starting <strong>Phase 3</strong>, when the fault controller and ground-truth log first exist. <strong>Phase 0 builds none of it</strong> — no <code>hoptrace-truth</code>/<code>hoptrace-engine</code>/<code>hoptrace-eval</code> users, no SQLite file, no permission bits. Phase 0's job is the raw namespace topology and a manually-driven <code>tc netem</code> impairment; see the companion Phase 0 Implementation Plan for the exact sequencing and what stays untouched.</p>
+      </div>
+    </section>
+
+    <section id="s05">
+      <div class="hop">§05</div>
+      <h2>Measurement Protocol</h2>
+      <h3>Path prober</h3>
+      <ul>
+        <li><span class="tag tag--open">Open → Phase 1 experiment</span> Probe transport is <strong>not</strong> locked to UDP. UDP and TCP SYN TTL probing are both Phase 1 candidates, compared on the testbed (methodology below) and selected for whichever gives the more useful, reliable correlation signal against the TCP/WebSocket application traffic. <code>run_probe_round()</code> (§07) takes a <code>transport</code> parameter so the choice is a configuration value, not a rewrite.</li>
+        <li><span class="tag tag--locked">Locked</span> Flow consistency regardless of transport: one 5-tuple per probing round (UDP: fixed destination port per round, starting at <code>33434</code>, incrementing only between rounds; TCP SYN: fixed source port per round), so every probe within a round hashes identically under ECMP (paris-traceroute style).</li>
+        <li><span class="tag tag--locked">Locked</span> TTL sweep: 1 through 5 every round (matches §03's five measurable hops).</li>
+        <li><span class="tag tag--locked">Locked</span> Samples per hop per round: 2.</li>
+        <li><span class="tag tag--locked">Locked</span> Round interval: 500 ms — yields 4 RTT samples per hop per second.</li>
+        <li><span class="tag tag--locked">Locked</span> Per-probe timeout: 300 ms. A probe with no ICMP Time-Exceeded/port-unreachable (UDP) or no SYN-ACK/RST-with-TTL-exceeded (TCP) reply within the timeout is recorded as <code>responded: false</code>, never silently dropped from the record.</li>
+        <li><span class="tag tag--locked">Locked</span> A hop is marked <code>UNKNOWN</code> for a round if both its samples in that round are non-responses.</li>
+      </ul>
+      <h4>Transport selection experiment (Phase 1)</h4>
+      <p>Run both transports, unchanged otherwise, across a short calibration set on the Phase 0 testbed (baseline + a handful of impairment trials reusing the Phase 0 acceptance scenario). Compare on: (1) response rate per hop — does one transport get silently deprioritized more than the other by the namespace routers' own handling; (2) RTT variance at baseline — a noisier transport degrades every downstream changepoint detector regardless of which one is chosen in §08; (3) closeness to the application's own transport family (TCP SYN is a strictly better proxy for a TCP/WebSocket app's treatment than UDP, but costs more to implement correctly — full handshake-avoidance and RST handling). Document the tradeoff and the chosen default in a short note before Phase 1 is marked complete; keep the losing transport's code path behind the same interface rather than deleting it, since the tradeoff may need revisiting once real fault data exists.</p>
+      <h3>Application telemetry</h3>
+      <ul>
+        <li><span class="tag tag--locked">Locked</span> Transport: WebSocket over TCP, one persistent connection for the trial's duration.</li>
+        <li><span class="tag tag--locked">Locked</span> <code>ping</code> message cadence: 20 Hz (every 50 ms), each carrying a monotonic <code>seq</code> and the client's <code>t_send_mono_ns</code>; server echoes <code>seq</code> immediately on receipt. RTT is computed entirely client-side as <code>t_recv_mono_ns − t_send_mono_ns</code> (design rationale: review §9).</li>
+        <li><span class="tag tag--locked">Locked</span> <code>interaction</code> message: sent at a Poisson-distributed mean rate of 2/sec (models bursty user input rather than a metronome); server must reply with <code>interaction_ack</code> within a 150 ms target budget. A late or missing ack is a distinct app-level symptom from raw ping RTT and is logged as its own series.</li>
+      </ul>
+    </section>
+
+    <section id="s06">
+      <div class="hop">§06</div>
+      <h2>Data Schemas</h2>
+      <p>All timestamps are signed 64-bit nanoseconds from <code>CLOCK_MONOTONIC</code> on the single vantage-point clock (C1). None of these schemas carry wall-clock time, deliberately — wall-clock is irrelevant to correlation and only invites the cross-host sync mistake C1 exists to prevent.</p>
+
+      <h4>HopSample</h4>
+      <pre class="schema">{
+  <span class="k">"round_id"</span>: <span class="c">int</span>,
+  <span class="k">"ttl"</span>: <span class="c">int</span>,               <span class="c">// 1..5</span>
+  <span class="k">"hop_ip"</span>: <span class="c">string | null</span>,
+  <span class="k">"rtt_ms"</span>: <span class="c">float | null</span>,
+  <span class="k">"responded"</span>: <span class="c">bool</span>,
+  <span class="k">"probe_index"</span>: <span class="c">int</span>,       <span class="c">// 0 or 1, within-round sample</span>
+  <span class="k">"t_send_mono_ns"</span>: <span class="c">int</span>,
+  <span class="k">"t_recv_mono_ns"</span>: <span class="c">int | null</span>
+}</pre>
+
+      <h4>AppRttSample <span class="meta-tag" style="margin-left:8px;">amended, responded clarification, pre-Phase-3</span></h4>
+      <pre class="schema">{
+  <span class="k">"seq"</span>: <span class="c">int</span>,
+  <span class="k">"kind"</span>: <span class="s">"ping"</span> | <span class="s">"interaction"</span>,
+  <span class="k">"t_send_mono_ns"</span>: <span class="c">int</span>,
+  <span class="k">"t_recv_mono_ns"</span>: <span class="c">int | null</span>,  <span class="c">// null = no ack received</span>
+  <span class="k">"rtt_ms"</span>: <span class="c">float | null</span>,       <span class="c">// null = no ack received</span>
+  <span class="k">"responded"</span>: <span class="c">bool</span>,          <span class="c">// true iff t_recv_mono_ns / rtt_ms are populated</span>
+  <span class="k">"missed_budget"</span>: <span class="c">bool | null</span> <span class="c">// responded=true: (kind="interaction" and rtt_ms&gt;150).</span>
+                                <span class="c">// responded=false: null for interaction (never a measured</span>
+                                <span class="c">// rtt_ms&gt;150 — see callout below), false for ping (no budget).</span>
+}</pre>
+      <div class="callout good">
+        <div class="callout-label">Responded clarification (locked before Phase 3)</div>
+        <p>A missing response is not a slow response. Three states, never collapsed: <strong>(1) responded within budget</strong> — <code>responded=true, rtt_ms</code> real, <code>missed_budget=false</code>; <strong>(2) responded late</strong> — <code>responded=true, rtt_ms</code> real &gt;150, <code>missed_budget=true</code>; <strong>(3) missing</strong> — <code>responded=false, rtt_ms=null</code>, and <code>missed_budget=null</code> for interaction (or <code>false</code> for ping, which has no budget concept at all). Earlier Phase 2 code set <code>missed_budget=true</code> for a missing interaction reply — representing "never arrived" as if it were a measured over-150ms RTT. Corrected: <code>null</code> means "budget not evaluable," not "budget met" or "budget missed by a number."</p>
+      </div>
+
+      <h4>GroundTruthEvent <span class="meta-tag" style="margin-left:8px;">hoptrace-truth only</span></h4>
+      <pre class="schema">{
+  <span class="k">"event_id"</span>: <span class="c">uuid</span>,
+  <span class="k">"trial_id"</span>: <span class="c">uuid</span>,
+  <span class="k">"hop_target"</span>: <span class="c">int</span>,          <span class="c">// 1..5, matches §03 TTL</span>
+  <span class="k">"impairment_type"</span>: <span class="s">"latency"</span> | <span class="s">"jitter"</span> | <span class="s">"loss"</span> | <span class="s">"bandwidth"</span>,
+  <span class="k">"magnitude"</span>: { <span class="c">"...type-specific, see §09"</span> },
+  <span class="k">"t_start_mono_ns"</span>: <span class="c">int</span>,
+  <span class="k">"t_end_mono_ns"</span>: <span class="c">int | null</span>,
+  <span class="k">"tc_command"</span>: <span class="c">string</span>       <span class="c">// exact command executed, for audit</span>
+}</pre>
+
+      <h4>EvidenceRecord <span class="meta-tag" style="margin-left:8px;">only output the UI may render</span></h4>
+      <pre class="schema">{
+  <span class="k">"trial_id"</span>: <span class="c">uuid</span>,
+  <span class="k">"generated_at_mono_ns"</span>: <span class="c">int</span>,
+  <span class="k">"claims"</span>: [
+    { <span class="k">"tag"</span>: <span class="s">"fact"</span>,        <span class="k">"text"</span>: <span class="c">string</span>, <span class="k">"data_ref"</span>: <span class="c">{series, round_id}</span> },
+    { <span class="k">"tag"</span>: <span class="s">"inference"</span>,   <span class="k">"hop_range"</span>: {<span class="k">"min"</span>: <span class="c">int</span>, <span class="k">"max"</span>: <span class="c">int</span>}, <span class="k">"text"</span>: <span class="c">string</span> },
+    { <span class="k">"tag"</span>: <span class="s">"correlation"</span>, <span class="k">"lag_ms"</span>: <span class="c">float</span>, <span class="k">"text"</span>: <span class="c">string</span> },
+    { <span class="k">"tag"</span>: <span class="s">"confidence"</span>,  <span class="k">"level"</span>: <span class="s">"high"</span>|<span class="s">"medium"</span>|<span class="s">"low"</span>|<span class="s">"insufficient"</span>,
+      <span class="k">"score"</span>: <span class="c">float 0..1</span>, <span class="k">"factors"</span>: <span class="c">{...named factors, review §12}</span> },
+    { <span class="k">"tag"</span>: <span class="s">"unknown"</span>,     <span class="k">"hops"</span>: <span class="c">int[]</span>, <span class="k">"text"</span>: <span class="c">string</span> }
+  ]
+}</pre>
+    </section>
+
+    <section id="s07">
+      <div class="hop">§07</div>
+      <h2>Interfaces</h2>
+      <h3>Module boundaries</h3>
+      <p><span class="tag tag--locked">Locked</span> Signatures below are contracts, not implementations — each module is built and unit-tested independently against these shapes.</p>
+      <pre class="schema"><span class="c">// path prober — transport is a configuration value, not a code fork</span>
+run_probe_round(round_id: int, transport: <span class="s">"udp"</span> | <span class="s">"tcp_syn"</span>) -&gt; list[HopSample]
+
+<span class="c">// app telemetry client</span>
+on_ping_ack(seq: int, t_recv_mono_ns: int) -&gt; AppRttSample
+on_interaction_ack(seq: int, t_recv_mono_ns: int) -&gt; AppRttSample
+
+<span class="c">// correlation engine, stage 1</span>
+detect_onset(series: list[float], t: list[int]) -&gt; OnsetResult | None
+  <span class="c">// OnsetResult = { t_onset_ns: int, confidence_raw: float, method: str }</span>
+
+<span class="c">// correlation engine, stage 2</span>
+align_and_localize(app_onset: OnsetResult | None,
+                    hop_onsets: dict[int, OnsetResult | None]) -&gt; LocalizationResult
+  <span class="c">// LocalizationResult = { hop_range: {min,max} | None, corroborating_hops: int[] }</span>
+
+<span class="c">// correlation engine, stage 3</span>
+classify_evidence(localization: LocalizationResult,
+                   raw_samples: SampleWindow) -&gt; EvidenceRecord</pre>
+
+      <h3>Analysis API</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Caller</th><th>Returns</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">GET /api/v1/path/window</td><td>UI, eval harness</td><td>Recent <code>HopSample[]</code>, all hops</td></tr>
+            <tr><td class="mono">GET /api/v1/app/window</td><td>UI, eval harness</td><td>Recent <code>AppRttSample[]</code></td></tr>
+            <tr><td class="mono">GET /api/v1/evidence/latest</td><td>UI</td><td>Latest <code>EvidenceRecord</code></td></tr>
+            <tr><td class="mono">POST /api/v1/trials/{id}/start</td><td>fault controller, eval harness</td><td>Trial boundary marker only — no impairment contents, no hop number</td></tr>
+            <tr><td class="mono">POST /api/v1/trials/{id}/end</td><td>fault controller, eval harness</td><td>Trial boundary marker only</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>No endpoint under <code>/api/v1</code> is capable of returning a <code>GroundTruthEvent</code>. Ground truth is read exclusively by the evaluation harness directly from the SQLite log (§04), never through the Analysis API — keeping the API's surface itself structurally free of the leak, rather than merely policy-restricted.</p>
+    </section>
+
+    <section id="s08">
+      <div class="hop">§08</div>
+      <h2>Algorithm Candidates &amp; the Changepoint Selection Experiment</h2>
+      <p>This is the addition requested beyond the original review. <code>detect_onset()</code> (§07) is implemented once, but which algorithm sits behind it is not assumed — it's selected by running all candidates against real testbed traces before Phase 4 is finalized.</p>
+      <h3>Candidates</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Candidate</th><th>Type</th><th>Note</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A. Fixed-threshold baseline</strong></td><td>strawman</td><td>Flags rolling mean + k·σ exceeded. Included only as the control every other candidate must beat — never a deployment candidate.</td></tr>
+            <tr><td><strong>B. Two-sided CUSUM</strong></td><td>sequential, O(1)/sample</td><td>Classic, cheap, easy to explain in a viva; no native uncertainty output.</td></tr>
+            <tr><td><strong>C. Bayesian Online Changepoint Detection (BOCPD)</strong></td><td>online, probabilistic</td><td>Adams &amp; MacKay (2007). Produces a run-length posterior — a natural fit for the <code>confidence</code> tag in §06's <code>EvidenceRecord</code>.</td></tr>
+            <tr><td><strong>D. PELT</strong></td><td>offline/batch, exact</td><td>Killick et al. (2012), via the <code>ruptures</code> library. Higher offline accuracy; not natively streaming — would need periodic re-runs over a sliding window, a real cost against the 500 ms probe cadence.</td></tr>
+            <tr><td><strong>E. Rolling robust z-score (MAD-based)</strong></td><td>nonparametric</td><td>Robust to the heavy-tailed noise typical of network RTT; simplest to reason about.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>Experiment protocol</h3>
+      <ol>
+        <li><strong>Tuning-set collection (Phase 4a).</strong> Run a reduced fault matrix — 4 hops × 2 impairment types (latency, loss) × 3 magnitudes × 5 repeats = 120 trials — purely to generate labeled raw traces. This set is used only to choose the algorithm and is never reused in the Phase 5 reported evaluation numbers, to avoid tuning the algorithm on the same data used to score it.</li>
+        <li><strong>Uniform pipeline.</strong> Each candidate is substituted into <code>detect_onset()</code> and run through the unchanged stage-2/stage-3 pipeline, so what's compared is end-to-end localization behavior, not raw changepoint accuracy in isolation.</li>
+        <li><strong>Hard gate.</strong> Any candidate whose false-positive rate on no-fault control trials exceeds 5% is eliminated before ranking, regardless of its accuracy elsewhere — a detector that cries wolf is disqualified outright, not merely penalized.</li>
+        <li><strong>Ranking, survivors only.</strong> Weighted comparison on: (1) within-±1-hop localization accuracy [primary], (2) detection latency, (3) computational feasibility at the 500 ms probe cadence [disqualifying for D unless a windowed variant is shown to keep pace], (4) whether the method natively exposes an uncertainty signal usable by the confidence model.</li>
+        <li><strong>Freeze, once, before Phase 5 (C9).</strong> The winning algorithm's hyperparameters, the δ_align tolerance (§07), and the confidence-score weights (§06 <code>EvidenceRecord</code>) are fitted using <em>only</em> Phase 4a data and then frozen as one artifact. Phase 5's held-out test set is never touched during this step, and once frozen, none of these four values may be revisited using Phase 5 results — a poor Phase 5 outcome is reported as-is, not fed back to retune Phase 4.</li>
+        <li><strong>Output.</strong> A one-page selection report — scores per candidate, eliminations and why, the chosen method, and a documented runner-up fallback — becomes a required Phase 4 gate deliverable (§10).</li>
+      </ol>
+    </section>
+
+    <section id="s09">
+      <div class="hop">§09</div>
+      <h2>Evaluation Methodology</h2>
+      <h3>Magnitude definition</h3>
+      <p><span class="tag tag--locked">Locked</span> Magnitude is defined relative to each trial's own pre-fault baseline noise, using median absolute deviation (MAD) rather than standard deviation, because RTT distributions are right-skewed and MAD is more robust to that skew: <strong>mild</strong> = onset shift of 2–4× baseline MAD, <strong>moderate</strong> = 4–8×, <strong>severe</strong> = &gt;8×. For loss and bandwidth impairments, magnitude is expressed directly (loss %, capped Mbps) and independently binned into the same three labels via a fixed lookup table established during Phase 0a calibration runs.</p>
+      <h3>Full evaluation matrix (Phase 5, disjoint from the Phase 4a tuning set)</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Factor</th><th>Levels</th></tr></thead>
+          <tbody>
+            <tr><td>Fault location</td><td class="num">hop 1, 2, 3, 4</td></tr>
+            <tr><td>Fault type</td><td>latency, jitter, loss, bandwidth cap</td></tr>
+            <tr><td>Magnitude</td><td>mild, moderate, severe</td></tr>
+            <tr><td>Duration</td><td>transient (5 s), sustained (60 s)</td></tr>
+            <tr><td>Probe conditions</td><td>normal, one non-responding hop, simulated ICMP/UDP rate-limit</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>4 × 4 × 3 × 2 × 3 = 288 cells. <span class="tag tag--open">Open</span> repeats per cell — no count is locked here. §10's Phase 5a pilot procedure determines it before the full matrix runs.</p>
+      <h3>Repeat-count procedure (Phase 5a pilot — replaces the earlier fixed default)</h3>
+      <ol>
+        <li>Run a small pilot: 3 repeats × a representative subset of cells (one per fault type, at moderate magnitude, at hop 2 and hop 3) — roughly 24 pilot trials, drawn from the same held-out test conditions as the real matrix but not reused inside it.</li>
+        <li>From the pilot, measure: per-trial wall-clock runtime (drives how long the full matrix will take), and the observed variance and effect size of the localization-accuracy and detection-latency metrics within each pilot cell.</li>
+        <li>Run a simple power/sample-size calculation (e.g. a two-proportion or standard effect-size power calculation appropriate to the accuracy metric in §09) using the pilot's observed variance, targeting a stated power (e.g. 0.8) to detect the smallest effect size the project cares about distinguishing.</li>
+        <li>Propose the minimum defensible repeat count and the resulting total runtime for the full 288-cell matrix, for approval, before Phase 5 executes at scale. 15/cell was an unvalidated placeholder in the prior revision of this document and is withdrawn — the pilot's numbers govern instead.</li>
+      </ol>
+      <h3>Metric formulas</h3>
+      <ul>
+        <li><strong>Within-±1-hop accuracy</strong> = trials where <code>|reported_hop − ground_truth_hop| ≤ 1</code> ÷ total detected trials.</li>
+        <li><strong>False attribution rate</strong> = trials where confidence ∈ {high, medium} AND reported hop range excludes the true hop, ÷ total trials — the single number the review's honesty requirement lives or dies on.</li>
+        <li><strong>Detection latency</strong> = <code>t_onset_reported − t_start_mono_ns</code> (from the matching <code>GroundTruthEvent</code>, joined only by the evaluation harness).</li>
+        <li><strong>Calibration</strong> = a reliability diagram binning trials by reported <code>confidence.score</code> decile against observed within-±1-hop accuracy in that bin, plus a Brier score as a single summary number.</li>
+      </ul>
+    </section>
+
+    <section id="s10">
+      <div class="hop">§10</div>
+      <h2>Phase Gates &amp; Success Criteria</h2>
+      <p>Each gate is a go/no-go checklist. A phase is not "done enough" to start the next — every item must pass.</p>
+
+      <div class="gate">
+        <div class="gate-head"><span class="gate-num">Phase 0</span><h4>Testbed skeleton</h4></div>
+        <ul>
+          <li>All six namespaces reachable end-to-end; <code>ping ns-client → ns-server</code> shows 0% loss over 200 packets.</li>
+          <li>Standard <code>traceroute</code>/<code>mtr</code> run from <code>ns-client</code> shows exactly the 5 hops in §03, in order, on two consecutive runs.</li>
+          <li>A manual <code>tc netem delay 100ms</code> at <code>ns-r3</code> changes observed RTT to <code>ns-server</code> by 100 ms ± 10%, confirmed via <code>tc -s qdisc show</code> and a follow-up ping; removing it restores baseline.</li>
+        </ul>
+      </div>
+
+      <div class="gate">
+        <div class="gate-head"><span class="gate-num">Phase 1</span><h4>Path measurement engine</h4></div>
+        <ul>
+          <li>Hop identity matches §03's topology in ≥99% of 200 consecutive rounds (linear static-route topology, so near-100% is expected — anything lower indicates a probing bug, not real-world ECMP noise).</li>
+          <li>A deliberately firewalled router (drop rule on one <code>ns-r{N}</code>) is correctly reported as <code>UNKNOWN</code> for that hop, not silently omitted or interpolated.</li>
+        </ul>
+      </div>
+
+      <div class="gate">
+        <div class="gate-head"><span class="gate-num">Phase 2</span><h4>Application telemetry</h4></div>
+        <ul>
+          <li>5-minute unimpaired run: ping RTT std-dev &lt; 5 ms, zero sequence gaps.</li>
+          <li><code>interaction_ack</code> budget-miss rate is 0% at baseline, confirming the 150 ms budget is not itself the noise source.</li>
+        </ul>
+      </div>
+
+      <div class="gate">
+        <div class="gate-head"><span class="gate-num">Phase 3</span><h4>Fault-injection controller</h4></div>
+        <ul>
+          <li>All four impairment types injectable/removable at all four router hops, logged start/end within ±50 ms of the actual <code>tc</code> command's execution.</li>
+          <li>Isolation check: a process running as <code>hoptrace-engine</code> attempting to read the ground-truth SQLite file receives a permission error, verified by an explicit negative test, not just absence of a code path.</li>
+        </ul>
+      </div>
+
+      <div class="gate">
+        <div class="gate-head"><span class="gate-num">Phase 4</span><h4>Correlation engine + algorithm selection</h4></div>
+        <ul>
+          <li>Phase 4a tuning-set collection (120 trials) complete; §08 selection report produced and reviewed.</li>
+          <li>Chosen algorithm, on the tuning set, achieves within-±1-hop accuracy ≥ 80% and false-attribution rate ≤ 10% — thresholds are provisional pending the Phase 4a data itself (§11.7) but the engine may not proceed to Phase 5 below them.</li>
+          <li>Algorithm, hyperparameters, δ_align, and confidence weights are frozen as one artifact per C9 — dated, recorded, and not touched again regardless of Phase 5 outcome.</li>
+        </ul>
+      </div>
+
+      <div class="gate">
+        <div class="gate-head"><span class="gate-num">Phase 5a</span><h4>Repeat-count pilot</h4></div>
+        <ul>
+          <li>~24-trial pilot run (procedure in §09) complete; runtime, variance, and effect size measured.</li>
+          <li>Power/sample-size calculation performed and a minimum defensible repeat count proposed, with the resulting full-matrix runtime — submitted for approval before Phase 5 proper begins.</li>
+        </ul>
+      </div>
+
+      <div class="gate">
+        <div class="gate-head"><span class="gate-num">Phase 5</span><h4>Evaluation harness</h4></div>
+        <ul>
+          <li>Full matrix (§09) executed on the held-out set with the Phase 5a-approved repeat count — never the withdrawn 15/cell placeholder.</li>
+          <li>All metrics in §09 computed and reported, including the ones that aren't flattering.</li>
+          <li>Calibration check passes: mean accuracy in the top confidence decile is statistically greater than in the bottom decile (simple proportion test is sufficient) — if it doesn't, the confidence model is broken and Phase 6 (UI/demo) does not start until it's fixed.</li>
+          <li>Per C9: no value frozen in Phase 4 is adjusted as a result of this phase, even if results disappoint.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="s11">
+      <div class="hop">§11</div>
+      <h2>Remaining Technical Ambiguities</h2>
+      <p>These are not oversights — each is either genuinely undecided or deliberately deferred to data the project doesn't have yet. Coding on Phase 0–3 can start without resolving any of them; Phase 4 cannot conclude without resolving 11.4–11.7.</p>
+
+      <div class="decision"><span class="tag tag--open">Open</span><p><strong>11.1 — Confidence score weighting.</strong> §06's <code>confidence.factors</code> lists named inputs, but the exact weighted formula turning them into a 0–1 score is not fixed here. Per <strong>C9</strong>, it is fitted <em>only</em> from Phase 4a tuning data, frozen alongside the chosen algorithm at the end of Phase 4, and never revisited using Phase 5 results — the earlier draft of this item incorrectly proposed deriving it from a "Phase 5 tuning pass," which is now explicitly prohibited.</p></div>
+
+      <div class="decision"><span class="tag tag--open">Open</span><p><strong>11.2 — Implementation language.</strong> Python or Go for the prober/engine is functionally interchangeable against every interface in §07. Not specified here; pick based on whichever the implementer is faster in, since the spec doesn't depend on the choice.</p></div>
+
+      <div class="decision"><span class="tag tag--open">Open</span><p><strong>11.3 — Trials per matrix cell.</strong> No longer a proposed default. §09/§10 now specify a Phase 5a pilot (~24 trials) followed by a power/sample-size calculation; the resulting repeat count is proposed for your approval before the full 288-cell matrix runs. The withdrawn 15/cell placeholder should not be used for planning purposes — it was unvalidated.</p></div>
+
+      <div class="decision"><span class="tag tag--open">Open</span><p><strong>11.4 — BOCPD hazard-rate / PELT penalty hyperparameters.</strong> Both require a tuning constant, fitted from Phase 4a data only and frozen at the same time as the confidence weights (C9). Whether the constant is tuned once globally or per-series is itself part of what the §08 selection experiment needs to decide — flagged here because it's easy to accidentally hard-code a value while building the candidates rather than treating it as part of the experiment.</p></div>
+
+      <div class="decision"><span class="tag tag--open">Open → Phase 1 experiment</span><p><strong>11.5 — Probe transport.</strong> Resolved into a concrete Phase 1 experiment rather than left as an unresolved tradeoff — see §05, "Transport selection experiment." UDP and TCP SYN are both implemented behind the same <code>run_probe_round(transport=...)</code> interface (§07) and compared on the testbed before one is chosen as the default; the losing transport's code path is kept, not deleted, since the choice may need revisiting once real fault data exists.</p></div>
+
+      <div class="decision"><span class="tag tag--open">Open</span><p><strong>11.6 — δ_align tolerance.</strong> Stage 2 (§07, <code>align_and_localize</code>) needs a tolerance window for "concurrent" onsets. A reasoned starting default is ~3× the probe round interval (1.5 s). Per <strong>C9</strong>, the final value is fitted from Phase 4a traces only, frozen with the algorithm and confidence weights at the end of Phase 4, and not adjusted using Phase 5 data.</p></div>
+
+      <div class="decision"><span class="tag tag--open">Open</span><p><strong>11.7 — Phase 4 accuracy thresholds (80% / 10%).</strong> Stated as provisional gate numbers in §10. They're reasonable targets, not derived from any prior data about this specific testbed — if the Phase 4a tuning set shows every candidate topping out lower, the threshold needs revisiting rather than being treated as a hard requirement that blocks the whole project.</p></div>
+
+      <div class="decision"><span class="tag tag--open">Open</span><p><strong>11.8 — Live-demo target and server placement.</strong> Out of scope for Phase 0–5 (which is testbed-only per C2), but flagged now because it affects whether any Phase 6 demo infrastructure needs to be provisioned in parallel. Needs an authorized destination named explicitly before that phase, not assumed.</p></div>
+    </section>
+
+  </main>
+
+  <footer class="doc-footer">
+    <span>HOPTRACE Phase 0–5 specification — for review, no code written or executed</span>
+    <span>Prepared for HOPTRACE project submission</span>
+  </footer>
+</div>

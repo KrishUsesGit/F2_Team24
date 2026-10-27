@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HOPTRACE</title>
+<meta name="description" content="Network path fault localization through application-to-hop correlation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/main.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+
+<nav id="journey-rail" aria-hidden="true">
+  <span class="rail-label" id="rail-label-top">CLIENT</span>
+  <div class="rail-track"><div class="rail-fill" id="rail-fill"></div></div>
+  <span class="rail-label" id="rail-label-bottom">SERVER</span>
+</nav>
+
+<main>
+
+  <!-- 01 HERO -->
+  <section id="hero" class="section">
+    <p class="kicker">Network Path Fault Localization</p>
+    <h1 class="wordmark">HOPTRACE</h1>
+    <p class="hero-sub">
+      A UDP/TCP path probe and an application client share one clock.
+      When the app slows down, HOPTRACE looks for the first hop whose
+      own timing shows it too — and says so only when the evidence
+      supports it.
+    </p>
+    <div class="hero-path-preview">
+      <div class="path-track" id="hero-track"></div>
+    </div>
+    <div class="scroll-cue"><span class="stem"></span>Scroll to trace a real trial</div>
+  </section>
+
+  <!-- 02 TRIAL PICKER -->
+  <section id="pick" class="section">
+    <p class="kicker">Three real trials from the exposed held-out set</p>
+    <h2>Every number past this point comes from a real run of the testbed.</h2>
+    <p class="lead">
+      No measurement on this page is invented. Pick a trial recorded during
+      Phase 4 data collection — the six-node namespace testbed, a real
+      fault controller, real probes — and the rest of the page traces
+      through its actual data. These trials belong to the original
+      held-out set, which was later inspected while the Phase 4b detector
+      variants were designed, so they illustrate the pipeline; they are
+      not independent proof that it works.
+    </p>
+    <div class="trial-grid" id="trial-grid" role="group" aria-label="Select a trial"></div>
+  </section>
+
+  <!-- 03/04/05 PINNED JOURNEY -->
+  <section id="journey">
+    <div class="journey-pin" id="journey-pin">
+      <div class="journey-stage">
+        <div class="path-track" id="journey-track"></div>
+      </div>
+      <div class="journey-copy">
+        <span class="step-label" id="step-label">01 / 04</span>
+        <h3 id="step-title">Baseline</h3>
+        <p id="step-body">Loading trial…</p>
+        <div class="journey-readout" id="step-readout"></div>
+      </div>
+    </div>
+    <div class="journey-steps">
+      <div class="journey-step" data-step="0"></div>
+      <div class="journey-step" data-step="1"></div>
+      <div class="journey-step" data-step="2"></div>
+      <div class="journey-step" data-step="3"></div>
+    </div>
+  </section>
+
+  <!-- 06 HOP INSPECTION -->
+  <section id="inspect" class="section">
+    <p class="kicker">Per-hop evidence</p>
+    <h2>Open a hop to see why it was labeled the way it was.</h2>
+    <p class="lead">Every label traces to a typed evidence field — never a re-guess.</p>
+    <div class="hop-strip" id="hop-strip"></div>
+  </section>
+
+  <!-- 07 EVIDENCE / CONFIDENCE -->
+  <section id="evidence" class="section">
+    <p class="kicker">Evidence record</p>
+    <h2>The five claim types behind the result.</h2>
+    <p class="lead">
+      fact / inference / correlation / confidence / unknown — the same
+      typed record drives this page, the technical report, and nothing else.
+      The confidence level is a fixed heuristic based on how many hops were
+      unknown; it is not a probability and has not been calibrated.
+    </p>
+    <div class="confidence-strip" id="confidence-strip"></div>
+    <div class="claims-list" id="claims-list"></div>
+  </section>
+
+  <!-- 08 SYSTEM EVALUATION + LIMITATIONS -->
+  <section id="eval" class="section">
+    <p class="kicker">System-wide results on an exposed held-out set — not this trial alone</p>
+    <h2>How well does HOPTRACE actually localize faults?</h2>
+    <p class="lead">
+      These numbers are read unchanged from <code class="mono">held_out_results_4b.json</code>:
+      the Phase 4b configuration scored on the same 12 trials as the
+      earlier Phase 4 run. Those traces had already been inspected while the
+      Phase 4b detector variants were designed, so this is a historical
+      record of what the frozen configuration scored — <strong>not an
+      independent validation</strong>. The only independent result so far is
+      Phase 4, which missed the false-attribution limit (3 of 12 = 25%
+      against a 10% maximum).
+    </p>
+    <div class="eval-grid" id="eval-grid"></div>
+    <div class="gate-badge" id="gate-badge"></div>
+
+    <div class="limitations">
+      <h3>What this system cannot yet do</h3>
+      <ul>
+        <li><strong>Recall is 50%.</strong> Of eight trials with a real injected fault, HOPTRACE's frozen detector raised a claim in four. It stays silent rather than guess on the rest.</li>
+        <li><strong>Loss and bandwidth faults are not localized.</strong> Across the 4 loss/bandwidth trials in the exposed held-out set and the 4 in the Phase 4b tuning set, the frozen detector localized none. It was developed against latency and jitter behaviour. Whether bandwidth limits can be observed at all with the current light probe traffic is not yet established; any bandwidth-localization claim stays unproven.</li>
+        <li><strong>This evaluation is not independent.</strong> The held-out set was inspected during Phase 4b design, so no result here validates the frozen detector on unseen data. A fresh, sealed evaluation has not been run.</li>
+        <li><strong>"No significant degradation" means no onset was detected</strong> — it does not rule out a fault that covers most of the observation window, or a measurement with too little data. The system has no separate "insufficient data" result yet.</li>
+        <li><strong>The 1.5s alignment window (δ_align) is fixed, not empirically validated</strong> against independent ground-truth propagation delay — it is a disclosed, reasoned choice, not a measured constant.</li>
+        <li><strong>Sample sizes are small.</strong> Twelve trials, of which four were localized, cannot certify a production system. Confidence intervals on every rate above are wide.</li>
+        <li><strong>Confidence scores are a fixed, disclosed heuristic</strong> — corroborating-hop fraction × completeness — not a calibrated probability model.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- 09 FOOTER -->
+  <section id="footer-section" class="section">
+    <p class="kicker">Methodology</p>
+    <p class="lead">
+      Six linear Linux network namespaces, tc/netem fault injection with
+      ground truth isolated from the localization engine at the OS
+      permission level, a shared CLOCK_MONOTONIC clock between prober and
+      app client, and an onset detector selected on tuning data. Its
+      Phase 4b configuration was then scored on a held-out set that had
+      already been inspected during design (see the evaluation section).
+    </p>
+    <div class="config-line">
+      algorithm: <strong id="cfg-algo">—</strong> ·
+      k_mad: <strong>5.0</strong> ·
+      min_run: <strong>3</strong> ·
+      δ_align: <strong>1.5s</strong> ·
+      commit: <strong id="cfg-commit">—</strong>
+    </div>
+  </section>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha512-onMTRKJBKz8M1TnqqDuGBlowlH0ohFzMXYRNebz+yOcc5TQr/zAKsthzhuv0hiyUKEiQEQXEynnXCvNTOk50dg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="scripts/app.js"></script>
+</body>
+</html>

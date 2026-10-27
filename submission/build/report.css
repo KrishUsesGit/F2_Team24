@@ -1,0 +1,111 @@
+/* HOPTRACE report stylesheet: A4, printed via headless Chrome.
+   Palette and fonts follow the HOPTRACE website (frontend/src/styles/index.css). */
+@font-face { font-family: "Unbounded"; font-weight: 200 900;
+  src: url("../../frontend/node_modules/@fontsource-variable/unbounded/files/unbounded-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Instrument Sans"; font-weight: 400 700;
+  src: url("../../frontend/node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 100 800;
+  src: url("../../frontend/node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2") format("woff2"); }
+
+:root {
+  --ink: #14181a; --soft: #3d4d55; --mint50: #f3f8f6; --mint100: #e7eff2; --mint200: #d3e3e6;
+  --signal: #2fd3e0; --structure: #6a4dff; --healthy: #b4ff3d; --degraded: #ff6b4a; --unknown: #ffd23f;
+}
+
+@page {
+  size: A4; margin: 22mm 20mm 22mm 20mm;
+  @top-left { content: "HOPTRACE: Network Path Fault Localization"; font: 500 8pt "Instrument Sans", Arial, sans-serif; color: #3d4d55; }
+  @top-right { content: "BCSE308P · Project Report"; font: 500 8pt "Instrument Sans", Arial, sans-serif; color: #3d4d55; }
+  @bottom-center { content: counter(page); font: 600 9pt "Instrument Sans", Arial, sans-serif; color: #14181a; }
+}
+@page :first { margin: 0; background: #e7eff2; @top-left { content: none; } @top-right { content: none; } @bottom-center { content: none; } }
+@page toc { }
+
+html { font: 10pt/1.5 "Instrument Sans", Arial, sans-serif; color: var(--ink); }
+body { margin: 0; }
+p { margin: 0 0 7pt; orphans: 3; widows: 3; }
+ul, ol { margin: 0 0 8pt; padding-left: 16pt; }
+li { margin-bottom: 2.5pt; }
+code, pre, .mono { font-family: "JetBrains Mono", Consolas, monospace; }
+code { font-size: 8.6pt; background: var(--mint100); padding: 0.5pt 3pt; border-radius: 3pt; }
+a { color: var(--ink); }
+
+h1 { font: 800 17pt/1.2 "Unbounded", "Arial Black", sans-serif; margin: 0 0 12pt; padding-bottom: 6pt;
+     border-bottom: 3pt solid var(--ink); break-before: page; break-after: avoid; letter-spacing: -0.2pt; }
+h1.nobreak { break-before: auto; }
+h2 { font: 700 12.5pt/1.25 "Instrument Sans", Arial, sans-serif; margin: 16pt 0 6pt; break-after: avoid;
+     border-left: 5pt solid var(--signal); padding-left: 7pt; }
+h3 { font: 700 10.5pt/1.3 "Instrument Sans", Arial, sans-serif; margin: 12pt 0 4pt; break-after: avoid; color: var(--ink); }
+h4 { font: 700 9.5pt/1.3 "Instrument Sans", Arial, sans-serif; margin: 9pt 0 3pt; break-after: avoid; color: var(--soft); text-transform: uppercase; letter-spacing: 0.4pt; }
+
+/* ---------- cover ---------- */
+.cover { height: 297mm; box-sizing: border-box; padding: 24mm 22mm 18mm; break-after: page; position: relative;
+  background-color: var(--mint100);
+  background-image: radial-gradient(#b6c9cf 1pt, transparent 1.2pt); background-size: 14pt 14pt; }
+.cover .tag { display: inline-block; font: 600 9pt "JetBrains Mono", monospace; background: var(--paper, #fff);
+  border: 2.2pt solid var(--ink); border-radius: 20pt; padding: 3pt 12pt; box-shadow: 3pt 3pt 0 var(--ink); background: #fff; }
+.cover h1.title { font: 900 52pt/1 "Unbounded", "Arial Black", sans-serif; border: 0; margin: 34pt 0 8pt; padding: 0; break-before: auto; letter-spacing: -2pt; }
+.cover .subtitle { font: 700 17pt/1.25 "Instrument Sans", Arial, sans-serif; max-width: 140mm; margin-bottom: 8pt; }
+.cover .dots { display: flex; gap: 6pt; margin: 14pt 0 22pt; }
+.cover .dots i { width: 14pt; height: 14pt; border-radius: 50%; border: 2pt solid var(--ink); display: block; }
+.cover .card { background: #fff; border: 2.4pt solid var(--ink); border-radius: 16pt; box-shadow: 5pt 5pt 0 var(--ink); padding: 12pt 16pt; margin-top: 8pt; }
+.cover table { border: 0; width: 100%; margin: 0; }
+.cover td { border: 0; padding: 3.2pt 0; font-size: 10.5pt; vertical-align: top; }
+.cover td:first-child { width: 38mm; font: 600 8.5pt "JetBrains Mono", monospace; color: var(--soft); padding-top: 4.5pt; }
+.pending { background: var(--unknown); border: 1.5pt dashed var(--ink); border-radius: 4pt; padding: 0 5pt; font-weight: 700; }
+.cover .banner { margin-top: 18pt; background: var(--unknown); border: 2.4pt dashed var(--ink); border-radius: 14pt; padding: 9pt 14pt; font-size: 9.6pt; }
+.cover .foot { position: absolute; left: 22mm; right: 22mm; bottom: 14mm; font: 500 8.5pt "JetBrains Mono", monospace; color: var(--soft); }
+
+/* ---------- TOC ---------- */
+.toc { break-before: page; }
+.toc h1 { break-before: auto; }
+.toc ol { list-style: none; padding: 0; margin: 0; column-count: 2; column-gap: 12mm; }
+.toc li { display: flex; align-items: baseline; margin: 0 0 3pt; font-size: 9.2pt; break-inside: avoid; }
+.toc li:not(.sub) { margin-top: 5pt; font-weight: 600; }
+.toc li.sub { padding-left: 10pt; font-size: 8pt; color: var(--soft); margin: 0 0 1pt; font-weight: 400; }
+.toc .dots { flex: 1; border-bottom: 1pt dotted #8aa; margin: 0 5pt; transform: translateY(-2pt); }
+.toc .pg { font: 600 9.5pt "JetBrains Mono", monospace; }
+
+/* ---------- tables ---------- */
+table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt; font-size: 8.8pt; break-inside: avoid; }
+th { background: var(--ink); color: #fff; text-align: left; font-weight: 600; padding: 4pt 6pt; border: 1pt solid var(--ink); }
+td { padding: 3.6pt 6pt; border: 1pt solid #9db0b7; vertical-align: top; }
+tr:nth-child(even) td { background: var(--mint50); }
+td.num, th.num { text-align: right; font-family: "JetBrains Mono", monospace; font-size: 8.4pt; white-space: nowrap; }
+td.bad { background: #ffd9d0 !important; font-weight: 600; }
+td.warn { background: #fff0b8 !important; font-weight: 600; }
+td.ok { background: #e6ffc2 !important; }
+.caption { font: 600 8.6pt "Instrument Sans", Arial, sans-serif; color: var(--soft); margin: 3pt 0 12pt; }
+.caption b { color: var(--ink); }
+.tcap { font: 600 8.6pt "Instrument Sans", Arial, sans-serif; color: var(--soft); margin: 8pt 0 2pt; break-after: avoid; }
+.tcap b { color: var(--ink); }
+
+figure { margin: 8pt 0 4pt; break-inside: avoid; text-align: center; }
+figure img, figure svg { max-width: 100%; height: auto; }
+figure img.shot { border: 1.6pt solid var(--ink); border-radius: 8pt; }
+figure.narrow img { max-width: 78%; }
+figcaption { font: 600 8.6pt "Instrument Sans", Arial, sans-serif; color: var(--soft); margin-top: 4pt; text-align: left; }
+figcaption b { color: var(--ink); }
+
+/* ---------- boxes ---------- */
+.box { border: 2pt solid var(--ink); border-radius: 12pt; padding: 8pt 12pt 3pt; margin: 8pt 0 10pt; background: #fff; break-inside: avoid; box-shadow: 3pt 3pt 0 var(--ink); }
+.box.warn { background: #fff4c4; border-style: dashed; box-shadow: none; }
+.box.bad { background: #ffe3dc; }
+.box.note { background: var(--mint50); }
+.box .bt { font: 700 9.4pt "Instrument Sans", Arial, sans-serif; margin-bottom: 3pt; }
+
+pre { background: #14181a; color: #e8f1f3; font-size: 7.6pt; line-height: 1.45; padding: 8pt 10pt; border-radius: 8pt; margin: 4pt 0 10pt;
+      white-space: pre-wrap; word-break: break-word; break-inside: avoid; }
+pre .c { color: #8fb3bd; }
+pre .k { color: #ffd23f; }
+.cmd { background: var(--mint100); border: 1.4pt solid var(--ink); }
+pre.cmd { color: var(--ink); background: var(--mint100); border: 1.4pt solid var(--ink); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10pt; }
+.small { font-size: 8.6pt; color: var(--soft); }
+.nowrap { white-space: nowrap; }
+.pill { display: inline-block; font: 600 7.8pt "JetBrains Mono", monospace; border: 1.4pt solid var(--ink); border-radius: 10pt; padding: 0 6pt; background: #fff; }
+.pill.fact { background: var(--signal); } .pill.inf { background: var(--structure); color: #fff; } .pill.cor { background: var(--healthy); }
+.pill.conf { background: var(--unknown); } .pill.unk { background: #fff; border-style: dashed; }
+
+th code { background: transparent; color: #fff; padding: 0; }

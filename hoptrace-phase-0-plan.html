@@ -1,0 +1,449 @@
+<title>Hoptrace Phase 0 Plan</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&display=swap');
+
+  :root{
+    --bg:#f5f6f8; --surface:#ffffff; --surface-2:#edf0f4; --surface-3:#e2e7ed;
+    --border:#d8dee6; --text:#17202b; --text-muted:#5a6472; --text-faint:#8892a0;
+    --accent:#205fa6; --accent-soft:#e7eefb; --accent-ink:#14406f;
+    --warn:#a6641b; --warn-soft:#fbeee0;
+    --danger:#a6362a; --danger-soft:#f7e6e3;
+    --good:#227050; --good-soft:#e2f3ea;
+    --font-display:'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-body:'Source Serif 4', Georgia, 'Iowan Old Style', serif;
+    --font-mono:'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0e131c; --surface:#151c28; --surface-2:#1b2432; --surface-3:#232f40;
+      --border:#2b3646; --text:#e7ecf3; --text-muted:#9aa7b8; --text-faint:#6d7889;
+      --accent:#75aae9; --accent-soft:#1c2f4a; --accent-ink:#cfe1f8;
+      --warn:#dba766; --warn-soft:#38291a;
+      --danger:#e08e81; --danger-soft:#3a221f;
+      --good:#7bcaa3; --good-soft:#173a29;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0e131c; --surface:#151c28; --surface-2:#1b2432; --surface-3:#232f40;
+    --border:#2b3646; --text:#e7ecf3; --text-muted:#9aa7b8; --text-faint:#6d7889;
+    --accent:#75aae9; --accent-soft:#1c2f4a; --accent-ink:#cfe1f8;
+    --warn:#dba766; --warn-soft:#38291a;
+    --danger:#e08e81; --danger-soft:#3a221f;
+    --good:#7bcaa3; --good-soft:#173a29;
+  }
+
+  *{box-sizing:border-box;}
+  body{background:var(--bg); color:var(--text); font-family:var(--font-body); font-size:16.5px; line-height:1.65; padding-inline:20px;}
+  h1,h2,h3,h4{font-family:var(--font-display); text-wrap:balance; color:var(--text); font-weight:600;}
+  a{color:var(--accent);}
+  code, .mono{font-family:var(--font-mono);}
+
+  .shell{max-width:1180px; margin:0 auto; display:grid; grid-template-columns:230px minmax(0,1fr); gap:44px; padding-block:36px 80px;}
+  @media (max-width:960px){ .shell{grid-template-columns:1fr;} }
+
+  .masthead{grid-column:1/-1; margin-bottom:8px;}
+  .eyebrow{font-family:var(--font-mono); font-size:.75rem; letter-spacing:.12em; text-transform:uppercase; color:var(--text-faint); display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .masthead h1{font-size:clamp(1.7rem,3.6vw,2.3rem); line-height:1.1; margin:0 0 10px;}
+  .masthead .sub{color:var(--text-muted); font-size:1.05rem; max-width:68ch; margin:0 0 20px;}
+  .meta-row{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+  .meta-tag{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.04em; color:var(--text-faint); border:1px solid var(--border); padding:6px 10px; border-radius:3px; background:var(--surface);}
+  .stop-banner{margin-top:18px; border:1px solid var(--danger); background:var(--danger-soft); border-radius:6px; padding:14px 18px; max-width:none;}
+  .stop-banner .callout-label{color:var(--danger);}
+  .stop-banner p{margin:0; font-size:.96rem;}
+
+  nav.toc{position:sticky; top:24px; align-self:start; max-height:calc(100vh - 48px); overflow-y:auto;}
+  nav.toc .toc-title{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:12px;}
+  nav.toc ol{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1px; border-left:1px solid var(--border);}
+  nav.toc a{display:block; text-decoration:none; color:var(--text-muted); font-size:.86rem; padding:5px 0 5px 14px; border-left:2px solid transparent; margin-left:-1px;}
+  nav.toc a:hover{color:var(--text); border-left-color:var(--accent-soft);}
+  nav.toc .toc-num{font-family:var(--font-mono); color:var(--text-faint); font-size:.75rem; margin-right:6px;}
+
+  details.mobile-toc{display:none;}
+  @media (max-width:960px){
+    nav.toc{display:none;}
+    details.mobile-toc{display:block; border:1px solid var(--border); border-radius:6px; background:var(--surface); padding:10px 14px; margin-bottom:8px;}
+    details.mobile-toc summary{font-family:var(--font-mono); font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; color:var(--text-muted);}
+    details.mobile-toc ol{list-style:none; margin:10px 0 0; padding:0; columns:2; gap:0 20px;}
+    details.mobile-toc a{display:block; font-size:.85rem; padding:4px 0; color:var(--text-muted); text-decoration:none;}
+  }
+
+  main{min-width:0;}
+  section{padding-block:32px; border-bottom:1px solid var(--border); scroll-margin-top:20px;}
+  section:last-of-type{border-bottom:none;}
+  .hop{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.1em; color:var(--accent); display:flex; align-items:center; gap:8px; margin-bottom:10px;}
+  .hop::before{content:''; width:16px; height:1px; background:var(--accent);}
+  section h2{font-size:1.4rem; margin:0 0 16px;}
+  section h3{font-size:1.05rem; margin:24px 0 10px; color:var(--text);}
+  section h4{font-size:.92rem; margin:16px 0 8px; color:var(--text); font-family:var(--font-mono); letter-spacing:.02em;}
+  section p{margin:0 0 14px; max-width:74ch;}
+  section ul, section ol{margin:0 0 14px; padding-left:22px; max-width:74ch;}
+  section li{margin-bottom:6px;}
+  strong{color:var(--text); font-weight:600;}
+  .lede{font-size:1.06rem; color:var(--text); max-width:70ch;}
+
+  .callout{border:1px solid var(--border); border-left:3px solid var(--accent); background:var(--surface); border-radius:4px; padding:16px 18px; margin:18px 0; max-width:76ch;}
+  .callout.good{border-left-color:var(--good);}
+  .callout.warn{border-left-color:var(--warn);}
+  .callout.bad{border-left-color:var(--danger);}
+  .callout-label{font-family:var(--font-mono); font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--text-faint); margin-bottom:6px;}
+  .callout.good .callout-label{color:var(--good);}
+  .callout.warn .callout-label{color:var(--warn);}
+  .callout.bad .callout-label{color:var(--danger);}
+  .callout p{margin:0; font-size:.97rem;}
+
+  .tag{display:inline-flex; align-items:center; gap:.4em; padding:.18em .6em; border-radius:3px; font-family:var(--font-mono); font-size:.68rem; letter-spacing:.05em; text-transform:uppercase; white-space:nowrap;}
+  .tag--do{background:var(--good-soft); border:1px solid var(--good); color:var(--good);}
+  .tag--dont{background:var(--danger-soft); border:1px solid var(--danger); color:var(--danger);}
+  .tag--manual{background:var(--warn-soft); border:1px solid var(--warn); color:var(--warn);}
+
+  .table-wrap{overflow-x:auto; margin:16px 0 20px; max-width:100%;}
+  table{border-collapse:collapse; width:100%; font-size:.9rem; min-width:480px;}
+  th, td{text-align:left; padding:9px 12px; border-bottom:1px solid var(--border); vertical-align:top;}
+  th{font-family:var(--font-mono); font-size:.7rem; letter-spacing:.05em; text-transform:uppercase; color:var(--text-faint); font-weight:500;}
+  tbody tr:hover{background:var(--surface-2);}
+  td.num, th.num{font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+
+  pre.code{background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:14px 16px; overflow-x:auto; font-family:var(--font-mono); font-size:.8rem; line-height:1.6; margin:12px 0 20px; max-width:100%;}
+  pre.code .c{color:var(--text-faint);}
+  pre.code .k{color:var(--accent);}
+  pre.code .file{color:var(--text-faint); font-family:var(--font-mono); font-size:.72rem; letter-spacing:.03em; text-transform:uppercase; display:block; margin:0 0 6px;}
+
+  .tree{background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:14px 18px; font-family:var(--font-mono); font-size:.85rem; line-height:1.7; margin:14px 0 20px; overflow-x:auto;}
+  .tree .d{color:var(--accent);}
+  .tree .c{color:var(--text-faint);}
+
+  .diagram-card{border:1px solid var(--border); border-radius:6px; background:var(--surface); padding:18px; margin:18px 0 22px;}
+  .diagram-card svg{width:100%; height:auto; display:block;}
+  .diagram-caption{font-family:var(--font-mono); font-size:.72rem; color:var(--text-faint); margin-top:10px; letter-spacing:.02em;}
+
+  .checklist{list-style:none; padding:0; margin:0 0 14px; max-width:74ch;}
+  .checklist li{display:flex; gap:10px; margin-bottom:8px; font-size:.95rem;}
+  .checklist li::before{content:'☐'; color:var(--accent); flex:0 0 auto;}
+
+  footer.doc-footer{grid-column:1/-1; margin-top:8px; padding-top:20px; border-top:1px solid var(--border); display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  footer.doc-footer span{font-family:var(--font-mono); font-size:.75rem; color:var(--text-faint);}
+
+  ::selection{background:var(--accent-soft); color:var(--accent-ink);}
+</style>
+
+<div class="shell">
+  <div class="masthead">
+    <div class="eyebrow"><span class="dot"></span> Computer Networks &middot; Phase 0 Implementation Plan</div>
+    <h1>HOPTRACE — Phase 0 Implementation Plan</h1>
+    <p class="sub">Environment, topology, scripts, and verification for the testbed skeleton only. Companion to the approved architecture review and the amended Phase 0–5 specification.</p>
+    <div class="meta-row">
+      <span class="meta-tag">workspace inspected: 2 docs only, no git, no code</span>
+      <span class="meta-tag">WSL2: not installed on this machine</span>
+      <span class="meta-tag">scope: Phase 0 only</span>
+    </div>
+    <div class="callout stop-banner">
+      <div class="callout-label">Nothing here has been executed</div>
+      <p>Every script below is shown as reference text inside this document. No file has been written to the project directory, no namespace created, no package installed, and no Windows feature enabled. Execution starts only after you approve this plan.</p>
+    </div>
+  </div>
+
+  <details class="mobile-toc">
+    <summary>Contents</summary>
+    <ol>
+      <li><a href="#p1">1 Environment Decision</a></li>
+      <li><a href="#p2">2 Directory Structure</a></li>
+      <li><a href="#p3">3 Commands / Scripts</a></li>
+      <li><a href="#p4">4 Verification Tests</a></li>
+      <li><a href="#p5">5 Failure / Recovery</a></li>
+      <li><a href="#p6">6 Acceptance Criteria</a></li>
+      <li><a href="#p7">7 Untouched Until Phase 1</a></li>
+    </ol>
+  </details>
+
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#p1"><span class="toc-num">1</span>Environment</a></li>
+      <li><a href="#p2"><span class="toc-num">2</span>Directory Structure</a></li>
+      <li><a href="#p3"><span class="toc-num">3</span>Scripts</a></li>
+      <li><a href="#p4"><span class="toc-num">4</span>Verification</a></li>
+      <li><a href="#p5"><span class="toc-num">5</span>Failure / Recovery</a></li>
+      <li><a href="#p6"><span class="toc-num">6</span>Acceptance Criteria</a></li>
+      <li><a href="#p7"><span class="toc-num">7</span>Untouched</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="p1">
+      <div class="hop">1</div>
+      <h2>Environment Decision</h2>
+      <p class="lede"><strong>WSL2, running Ubuntu 24.04 LTS.</strong> Not a standalone VM.</p>
+      <h3>Why</h3>
+      <ul>
+        <li>WSL2 runs a real, lightweight Linux kernel (not a compatibility shim like WSL1) — <code>ip netns</code>, <code>veth</code>, and <code>tc qdisc … netem</code> behave identically to bare-metal Linux. Nothing in the spec's testbed design (§03) needs to change for WSL2 specifically.</li>
+        <li>It's free, officially supported on this machine (Windows 11, build 26200 — confirmed by inspection), and avoids provisioning, licensing, or paying for a separate VM.</li>
+        <li>A remote cloud VM was considered and rejected for Phase 0: it would reintroduce a second host into the loop, which is exactly the cross-host problem constraint C1 (single clock, co-located client + prober) was designed to eliminate. Keeping everything — Windows host, WSL2 Linux kernel, all six namespaces — on one physical machine keeps that constraint trivially true throughout Phase 0–5, not just in the app-telemetry component.</li>
+        <li>Lighter weight than a full VM (VirtualBox/VMware/Hyper-V standalone guest): faster to start/stop, shares the host filesystem, no separate resource allocation to manage for a project this size.</li>
+      </ul>
+      <h3>Current state (inspected)</h3>
+      <ul>
+        <li><code>wsl --status</code> reports: <strong>not installed</strong>.</li>
+        <li>OS: Windows 11 Home Single Language, build 26200, 64-bit — WSL2-eligible.</li>
+      </ul>
+      <div class="callout warn">
+        <div class="callout-label">Why I'm not installing this myself</div>
+        <p>Enabling WSL requires turning on the "Virtual Machine Platform" and "Windows Subsystem for Linux" optional Windows components, which needs administrator elevation and a reboot. That's a system-settings change, which I don't perform even with explicit approval — it's a standing rule, not a judgment call about this specific request. The commands below are for <strong>you</strong> to run, in an elevated PowerShell window, whenever you're ready:</p>
+      </div>
+      <pre class="code"><span class="file">run yourself, elevated PowerShell</span><span class="c"># installs WSL2 + Ubuntu-24.04, then prompts for reboot</span>
+wsl --install -d Ubuntu-24.04
+
+<span class="c"># after reboot, first launch of Ubuntu-24.04 will prompt for a UNIX username/password</span>
+<span class="c"># then confirm the kernel and distro version:</span>
+wsl --status
+wsl -l -v</pre>
+      <p>Everything from §2 onward assumes that's done and you have an interactive shell inside <code>Ubuntu-24.04</code> under WSL2. All remaining Phase 0 commands run <em>inside</em> that WSL2 shell, not in PowerShell.</p>
+    </section>
+
+    <section id="p2">
+      <div class="hop">2</div>
+      <h2>Directory / Project Structure</h2>
+      <p>Phase 0 needs shell scripts and a short README — nothing else. No source tree for the prober, app, engine, or UI is created yet (§7).</p>
+      <div class="tree">hoptrace/
+<span class="c">├── hoptrace-architecture-review.html   (existing)</span>
+<span class="c">├── hoptrace-phase-0-5-spec.html        (existing, amended v1.1)</span>
+<span class="c">├── hoptrace-phase-0-plan.html          (this document)</span>
+<span class="d">└── testbed/</span>
+    <span class="d">└── phase0/</span>
+        ├── lib/
+        │   <span class="d">└── common.sh</span>       <span class="c"># namespace/address table, sourced by every other script</span>
+        ├── setup_topology.sh       <span class="c"># build the 6-namespace testbed</span>
+        ├── teardown_topology.sh    <span class="c"># tear it down cleanly</span>
+        ├── verify_topology.sh      <span class="c"># run §4's verification tests, print PASS/FAIL</span>
+        ├── impair_hop.sh           <span class="c"># manual netem apply — Phase 0 demo only, see §7</span>
+        ├── clear_impairment.sh     <span class="c"># manual netem removal</span>
+        └── README.md               <span class="c"># prerequisites, run order, troubleshooting pointers</span></div>
+      <p><span class="tag tag--manual">Note</span> <code>testbed/phase0/</code> is scoped to this phase deliberately — when Phase 1 starts, the path prober gets its own top-level directory (e.g. <code>prober/</code>) rather than being folded into <code>testbed/</code>, keeping "the network we're testing" and "the code doing the testing" as separate concerns from day one.</p>
+      <p>No git repository exists yet. Recommended, optional, first step once WSL2 is up: <code>git init</code> in <code>hoptrace/</code> and commit the three existing docs before adding the <code>testbed/</code> scripts — not required by any Phase 0 acceptance criterion, but cheap insurance once real scripts exist to lose.</p>
+    </section>
+
+    <section id="p3">
+      <div class="hop">3</div>
+      <h2>Commands / Scripts</h2>
+      <p>Addressing and namespace names below are exactly §03 of the amended spec — nothing here introduces a new topology decision.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Node</th><th>Connected subnets (addresses)</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">ns-client</td><td class="mono">S1: 10.10.1.1</td></tr>
+            <tr><td class="mono">ns-r1</td><td class="mono">S1: 10.10.1.2 &nbsp;/&nbsp; S2: 10.10.2.1</td></tr>
+            <tr><td class="mono">ns-r2</td><td class="mono">S2: 10.10.2.2 &nbsp;/&nbsp; S3: 10.10.3.1</td></tr>
+            <tr><td class="mono">ns-r3</td><td class="mono">S3: 10.10.3.2 &nbsp;/&nbsp; S4: 10.10.4.1</td></tr>
+            <tr><td class="mono">ns-r4</td><td class="mono">S4: 10.10.4.2 &nbsp;/&nbsp; S5: 10.10.5.1</td></tr>
+            <tr><td class="mono">ns-server</td><td class="mono">S5: 10.10.5.2</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h4>lib/common.sh</h4>
+      <pre class="code"><span class="k">#!/usr/bin/env bash</span>
+<span class="c"># sourced by every other Phase 0 script — single source of truth for names/addresses</span>
+<span class="k">set</span> -euo pipefail
+
+NODES=(ns-client ns-r1 ns-r2 ns-r3 ns-r4 ns-server)   <span class="c"># index 0..5</span>
+ROUTERS=(ns-r1 ns-r2 ns-r3 ns-r4)                     <span class="c"># the four forwarding namespaces</span>
+
+<span class="c"># subnet N (1..5) = 10.10.N.0/30 ; low-index node = .1, high-index node = .2</span>
+subnet() { echo "10.10.$1.0/30"; }
+addr_lo() { echo "10.10.$1.1"; }   <span class="c"># address of NODES[$1-1] in subnet $1</span>
+addr_hi() { echo "10.10.$1.2"; }   <span class="c"># address of NODES[$1]   in subnet $1</span>
+veth_a() { echo "veth-s$1-a"; }    <span class="c"># host-side name of subnet $1's pair, low-index end</span>
+veth_b() { echo "veth-s$1-b"; }    <span class="c"># high-index end</span></pre>
+
+      <h4>setup_topology.sh</h4>
+      <pre class="code"><span class="k">#!/usr/bin/env bash</span>
+<span class="k">set</span> -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/lib/common.sh"
+
+<span class="c"># 1. create namespaces</span>
+<span class="k">for</span> ns <span class="k">in</span> "${NODES[@]}"; <span class="k">do</span>
+  ip netns add "$ns"
+<span class="k">done</span>
+
+<span class="c"># 2. create the 5 veth pairs and move each end into its namespace</span>
+<span class="k">for</span> i <span class="k">in</span> 1 2 3 4 5; <span class="k">do</span>
+  a="$(veth_a $i)"; b="$(veth_b $i)"
+  ip link add "$a" type veth peer name "$b"
+  ip link set "$a" netns "${NODES[$((i-1))]}"
+  ip link set "$b" netns "${NODES[$i]}"
+  ip netns exec "${NODES[$((i-1))]}" ip addr add "$(addr_lo $i)/30" dev "$a"
+  ip netns exec "${NODES[$i]}"       ip addr add "$(addr_hi $i)/30" dev "$b"
+  ip netns exec "${NODES[$((i-1))]}" ip link set "$a" up
+  ip netns exec "${NODES[$i]}"       ip link set "$b" up
+  ip netns exec "${NODES[$((i-1))]}" ip link set lo up
+  ip netns exec "${NODES[$i]}"       ip link set lo up
+<span class="k">done</span>
+
+<span class="c"># 3. enable forwarding on the four router namespaces only</span>
+<span class="k">for</span> r <span class="k">in</span> "${ROUTERS[@]}"; <span class="k">do</span>
+  ip netns exec "$r" sysctl -qw net.ipv4.ip_forward=1
+<span class="k">done</span>
+
+<span class="c"># 4. static routes — explicit per-subnet, no aggregation (see plan §3 rationale)</span>
+ip netns exec ns-client ip route add 10.10.0.0/16 via 10.10.1.2
+
+ip netns exec ns-r1 ip route add 10.10.3.0/30 via 10.10.2.2
+ip netns exec ns-r1 ip route add 10.10.4.0/30 via 10.10.2.2
+ip netns exec ns-r1 ip route add 10.10.5.0/30 via 10.10.2.2
+
+ip netns exec ns-r2 ip route add 10.10.1.0/30 via 10.10.2.1
+ip netns exec ns-r2 ip route add 10.10.4.0/30 via 10.10.3.2
+ip netns exec ns-r2 ip route add 10.10.5.0/30 via 10.10.3.2
+
+ip netns exec ns-r3 ip route add 10.10.1.0/30 via 10.10.3.1
+ip netns exec ns-r3 ip route add 10.10.2.0/30 via 10.10.3.1
+ip netns exec ns-r3 ip route add 10.10.5.0/30 via 10.10.4.2
+
+ip netns exec ns-r4 ip route add 10.10.1.0/30 via 10.10.4.1
+ip netns exec ns-r4 ip route add 10.10.2.0/30 via 10.10.4.1
+ip netns exec ns-r4 ip route add 10.10.3.0/30 via 10.10.4.1
+
+ip netns exec ns-server ip route add 10.10.0.0/16 via 10.10.5.1
+
+echo "topology up."</pre>
+      <p>Each router gets exactly one specific route per non-adjacent subnet (3 each), aimed at the correct-direction neighbor. This is deliberately unaggregated — easy to audit line-by-line against the address table, at the cost of 14 lines instead of a clever CIDR summary. For a 6-node linear topology, auditability wins.</p>
+
+      <h4>teardown_topology.sh</h4>
+      <pre class="code"><span class="k">#!/usr/bin/env bash</span>
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/lib/common.sh"
+<span class="k">for</span> ns <span class="k">in</span> "${NODES[@]}"; <span class="k">do</span>
+  ip netns delete "$ns" 2>/dev/null || <span class="k">true</span>
+<span class="k">done</span>
+echo "torn down (namespaces removed; their veth halves go with them)."</pre>
+
+      <h4>impair_hop.sh <span class="tag tag--manual">manual, Phase 0 only</span></h4>
+      <pre class="code"><span class="k">#!/usr/bin/env bash</span>
+<span class="c"># usage: impair_hop.sh &lt;hop 1-4&gt; &lt;delay_ms&gt;</span>
+<span class="c"># applies on the router's SERVER-FACING interface, matching spec §03/§08:</span>
+<span class="c"># "Hop N onward" impairment, never framed as "Router N is faulty" (C8).</span>
+<span class="k">set</span> -euo pipefail
+hop="$1"; delay_ms="$2"
+router="ns-r${hop}"
+iface="$(veth_b $((hop+1)))"   <span class="c"># router's far-side interface, from lib/common.sh</span>
+ip netns exec "$router" tc qdisc add dev "$iface" root netem delay "${delay_ms}ms"
+echo "applied: ${delay_ms}ms delay on ${router}'s link segment toward hop $((hop+1))+ (NOT a claim that $router is faulty)"</pre>
+
+      <h4>clear_impairment.sh <span class="tag tag--manual">manual, Phase 0 only</span></h4>
+      <pre class="code"><span class="k">#!/usr/bin/env bash</span>
+<span class="c"># usage: clear_impairment.sh &lt;hop 1-4&gt;</span>
+<span class="k">set</span> -euo pipefail
+hop="$1"; router="ns-r${hop}"; iface="$(veth_b $((hop+1)))"
+ip netns exec "$router" tc qdisc del dev "$iface" root netem 2>/dev/null || <span class="k">true</span>
+echo "cleared impairment on ${router}."</pre>
+      <div class="callout warn">
+        <div class="callout-label">These two scripts are scaffolding, not the fault controller</div>
+        <p>They exist only to satisfy Phase 0's "demonstrable 100 ms netem impairment that can be applied and removed" acceptance criterion. They are hand-run from a shell, log nothing, and have none of the isolation properties specified in §04 of the amended spec. Phase 3 replaces them entirely with the real fault-injection controller — these are not a head start on that component, and should not be extended toward it (§7).</p>
+      </div>
+    </section>
+
+    <section id="p4">
+      <div class="hop">4</div>
+      <h2>Verification Tests</h2>
+      <h3>Test 1 — Zero-loss baseline connectivity</h3>
+      <pre class="code">ip netns exec ns-client ping -c 200 -i 0.02 10.10.5.2</pre>
+      <p><strong>Pass:</strong> <code>0% packet loss</code> in the summary. This is the direct check behind the "zero-loss baseline connectivity" acceptance item.</p>
+
+      <h3>Test 2 — Exactly 5 hops, in order, twice</h3>
+      <pre class="code">ip netns exec ns-client traceroute -n 10.10.5.2
+ip netns exec ns-client traceroute -n 10.10.5.2   <span class="c"># run again — must match</span>
+<span class="c"># or, for a live view:</span>
+ip netns exec ns-client mtr -n -r -c 20 10.10.5.2</pre>
+      <p><strong>Pass:</strong> both runs show exactly <code>10.10.1.2 → 10.10.2.2 → 10.10.3.2 → 10.10.4.2 → 10.10.5.2</code>, in that order, with no <code>*</code> (non-responding) entries. Requires installing <code>traceroute</code> and <code>mtr-tiny</code> (§3's only two non-default packages).</p>
+
+      <h3>Test 3 — netem impairment applies, measures, and clears</h3>
+      <pre class="code"><span class="c"># baseline</span>
+ip netns exec ns-client ping -c 20 10.10.5.2 | tail -1
+<span class="c"># apply 100ms at hop 3 (ns-r3's link toward ns-r4/server)</span>
+./impair_hop.sh 3 100
+ip netns exec ns-r3 tc -s qdisc show dev veth-s4-b
+ip netns exec ns-client ping -c 20 10.10.5.2 | tail -1
+<span class="c"># remove and confirm recovery</span>
+./clear_impairment.sh 3
+ip netns exec ns-client ping -c 20 10.10.5.2 | tail -1</pre>
+      <p><strong>Pass:</strong> impaired-run mean RTT is baseline + 100&nbsp;ms ± 10%; <code>tc -s qdisc show</code> confirms the <code>netem</code> qdisc is attached during the impaired window; post-clear ping returns to within baseline ± normal jitter.</p>
+
+      <h3>verify_topology.sh</h3>
+      <p>Wraps Tests 1–3 into one script that prints PASS/FAIL per check rather than requiring each command to be read by eye — genuinely useful once this is run more than once, which it will be.</p>
+      <pre class="code"><span class="k">#!/usr/bin/env bash</span>
+<span class="k">set</span> -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/lib/common.sh"
+
+pass() { echo "PASS: $1"; }
+fail() { echo "FAIL: $1"; exit 1; }
+
+loss=$(ip netns exec ns-client ping -c 200 -i 0.02 10.10.5.2 | grep -oP '\d+(?=% packet loss)')
+[[ "$loss" == "0" ]] && pass "zero-loss baseline (200/200)" || fail "baseline loss = ${loss}%"
+
+hops=$(ip netns exec ns-client traceroute -n -q1 10.10.5.2 | tail -n +2 | awk '{print $2}' | tr '\n' ' ')
+expected="10.10.1.2 10.10.2.2 10.10.3.2 10.10.4.2 10.10.5.2 "
+[[ "$hops" == "$expected" ]] && pass "5 hops in order: $hops" || fail "hop sequence mismatch: got [$hops]"
+
+echo "run Test 3 (netem apply/measure/clear) manually — see plan §4, it needs a before/after comparison a script shouldn't silently average away."</pre>
+    </section>
+
+    <section id="p5">
+      <div class="hop">5</div>
+      <h2>Failure / Recovery Procedures</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Symptom</th><th>Cause</th><th>Recovery</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">RTNETLINK: File exists</td><td>Namespace or veth left over from a previous, uncleanly-stopped run</td><td>Run <code>teardown_topology.sh</code> first; if a namespace still won't delete, <code>ip netns list</code> to confirm, then <code>ip netns delete &lt;name&gt;</code> individually.</td></tr>
+            <tr><td>Ping works but <code>traceroute</code> shows fewer than 5 hops</td><td><code>ip_forward</code> not enabled on a router, or a route missing</td><td><code>ip netns exec ns-rN sysctl net.ipv4.ip_forward</code> should read <code>1</code> on all four routers; re-check the specific route table for the namespace with <code>ip netns exec ns-rN ip route</code> against §3's table.</td></tr>
+            <tr><td><code>tc: Exclusivity flag on, cannot modify</code></td><td>Trying to <code>add</code> a netem qdisc that's already attached</td><td>Run <code>clear_impairment.sh</code> (which does <code>tc qdisc del</code>) before re-applying, or use <code>tc qdisc change</code> instead of <code>add</code> if intentionally adjusting a live impairment.</td></tr>
+            <tr><td>Everything in WSL2 seems to hang or lose namespace state</td><td>WSL2's own lightweight VM got into a bad state (rare, but real)</td><td>From PowerShell: <code>wsl --shutdown</code>, wait a few seconds, reopen the Ubuntu-24.04 shell, re-run <code>setup_topology.sh</code> — namespaces do not persist across a WSL2 VM shutdown, this is expected, not data loss.</td></tr>
+            <tr><td><code>ip netns exec</code>: Operation not permitted</td><td>Not running as root inside WSL2</td><td>All Phase 0 scripts need root inside the WSL2 shell — run with <code>sudo</code> or as a root shell; this is normal for namespace/tc manipulation and not specific to this project.</td></tr>
+            <tr><td>Traceroute shows the right hops but occasionally a <code>*</code></td><td>Default per-hop probe count/timeout in <code>traceroute</code> is aggressive for a freshly-up namespace link</td><td>Re-run; if persistent, increase per-hop queries (<code>traceroute -q 3</code>) — this is a traceroute-tool tuning issue in Phase 0, unrelated to the custom prober's own retry logic that Phase 1 builds separately.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>General reset procedure</strong> if anything is ambiguous: <code>teardown_topology.sh</code>, confirm <code>ip netns list</code> prints nothing, confirm no stray <code>veth-s*</code> interfaces remain in the root namespace with <code>ip link show</code>, then re-run <code>setup_topology.sh</code> from a clean state. Idempotent teardown-then-setup is the supported recovery path for every failure mode above except the WSL2 VM hang, which needs the `wsl --shutdown` step first.</p>
+    </section>
+
+    <section id="p6">
+      <div class="hop">6</div>
+      <h2>Phase 0 Acceptance Criteria</h2>
+      <p>Restated as a checklist — matches the Phase 0 gate in the amended spec §10 exactly, no additions.</p>
+      <ul class="checklist">
+        <li>WSL2 with Ubuntu 24.04 running; <code>ip netns</code> and <code>tc</code> available and functional.</li>
+        <li>All six namespaces (<code>ns-client</code>, <code>ns-r1</code>…<code>ns-r4</code>, <code>ns-server</code>) created with the exact addressing in §3.</li>
+        <li>Static routing verified: <code>ns-client → ns-server</code> reachable, and vice versa.</li>
+        <li>Test 1 passes: 200/200 packets, 0% loss, unimpaired.</li>
+        <li>Test 2 passes: <code>traceroute</code>/<code>mtr</code> shows exactly the 5 expected hops, in order, on two consecutive runs.</li>
+        <li>Test 3 passes: a 100&nbsp;ms <code>netem</code> impairment applied at Hop 3 changes measured RTT by 100&nbsp;ms ± 10%, is confirmed via <code>tc -s qdisc show</code>, and is fully removable, with ping returning to baseline afterward.</li>
+        <li><code>verify_topology.sh</code> exists and its automatable checks (Tests 1–2) pass on a clean run.</li>
+      </ul>
+      <p>No isolation-layer (OS users, permissions, ground-truth logging) criterion is included here — per amendment 5, that work starts in Phase 3, not Phase 0.</p>
+    </section>
+
+    <section id="p7">
+      <div class="hop">7</div>
+      <h2>What Remains Explicitly Untouched Until Phase 1+</h2>
+      <ul>
+        <li><span class="tag tag--dont">Untouched</span> The path prober (flow-consistent TTL probing, UDP/TCP-SYN transport experiment, <code>HopSample</code> emission) — Phase 1.</li>
+        <li><span class="tag tag--dont">Untouched</span> The WebSocket application client/server and <code>AppRttSample</code> telemetry — Phase 2.</li>
+        <li><span class="tag tag--dont">Untouched</span> The real fault-injection controller and its three-layer isolation (<code>hoptrace-truth</code>/<code>hoptrace-engine</code>/<code>hoptrace-eval</code> OS users, permissioned SQLite ground-truth log) — Phase 3. <code>impair_hop.sh</code>/<code>clear_impairment.sh</code> are manual scaffolding only and are not extended toward this.</li>
+        <li><span class="tag tag--dont">Untouched</span> The correlation engine, any of the five changepoint candidates, and the algorithm-selection experiment — Phase 4.</li>
+        <li><span class="tag tag--dont">Untouched</span> The evaluation harness, the Phase 5a pilot, and the fault matrix — Phase 5.</li>
+        <li><span class="tag tag--dont">Untouched</span> The Analysis API and any UI — later phases, explicitly excluded from this request.</li>
+        <li><span class="tag tag--dont">Untouched</span> Any package beyond what Phase 0 itself needs: no Python, no Node, no Docker, no database. The only non-default packages installed are <code>traceroute</code> and <code>mtr-tiny</code>, both required directly by the Phase 0 verification tests.</li>
+        <li><span class="tag tag--dont">Untouched</span> Git remote, CI, or any hosting — a local, optional <code>git init</code> is the only version-control step in scope, and only as an unrequired convenience.</li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer class="doc-footer">
+    <span>HOPTRACE Phase 0 plan — for review, no scripts written to disk, nothing executed</span>
+    <span>Prepared for HOPTRACE project submission</span>
+  </footer>
+</div>

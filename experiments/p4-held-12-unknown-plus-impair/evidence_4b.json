@@ -1,0 +1,87 @@
+{
+  "trial_id": "p4-held-12-unknown-plus-impair",
+  "generated_at_mono_ns": 41135518223,
+  "claims": [
+    {
+      "tag": "fact",
+      "text": "76 synchronized 500ms observation buckets covering t=1259221271863..1297221271863 (CLOCK_MONOTONIC ns).",
+      "data_ref": {
+        "series": "buckets",
+        "count": 76
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Application ping RTT onset detected at t=1269221271863 (method=mad_sustained_v1).",
+      "data_ref": {
+        "series": "app_ping",
+        "round_id": null,
+        "t_onset_ns": 1269221271863
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Hop 3 RTT onset detected at t=1269721271863 (method=mad_sustained_v1).",
+      "data_ref": {
+        "series": "hop_3",
+        "t_onset_ns": 1269721271863
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Hop 4 RTT onset detected at t=1269721271863 (method=mad_sustained_v1).",
+      "data_ref": {
+        "series": "hop_4",
+        "t_onset_ns": 1269721271863
+      }
+    },
+    {
+      "tag": "fact",
+      "text": "Hop 5 RTT onset detected at t=1270221271863 (method=mad_sustained_v1).",
+      "data_ref": {
+        "series": "hop_5",
+        "t_onset_ns": 1270221271863
+      }
+    },
+    {
+      "tag": "inference",
+      "hop_range": {
+        "min": 3,
+        "max": 5
+      },
+      "text": "Evidence is consistent with degradation first appearing at or after Hop 3, persisting through Hop 5."
+    },
+    {
+      "tag": "correlation",
+      "lag_ms": -500.0,
+      "text": "Application degradation onset is temporally correlated with the Hop 3 path-level onset (this is an association, not a causal claim)."
+    },
+    {
+      "tag": "confidence",
+      "level": "medium",
+      "score": 0.6,
+      "factors": {
+        "corroborating_hops": [
+          3,
+          4,
+          5
+        ],
+        "corroborating_fraction": 1.0,
+        "unknown_hops": [
+          1,
+          2
+        ],
+        "completeness_fraction": 0.6,
+        "note": "fixed, disclosed heuristic -- NOT fitted/calibrated (spec C9 reserves that for Phase 4a-only tuning)"
+      }
+    },
+    {
+      "tag": "unknown",
+      "hops": [
+        1,
+        2
+      ],
+      "text": "Hop(s) [1, 2] had insufficient responses to evaluate and are reported as unknown, not interpolated or assumed healthy."
+    }
+  ]
+}
